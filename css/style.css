@@ -540,18 +540,19 @@ ul {
     background-color: var(--border-color);
     margin: 8px 0;
 }
-
-/* Hero Section */
+/* Quick fix - just add padding-top to push content down */
 .hero {
-    height: 100vh;
+    padding-top: 80px; /* This will push your content below the header */
+    height: calc(100vh - 80px); /* Adjust height accordingly */
+    /* Keep your existing styles below */
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
     color: var(--text-color);
+    margin-top: 0; /* Remove any existing margin-top */
 }
-
 /* Correction de la section Hero */
 .hero {
     height: 85vh; /* Réduit de 100vh à 85vh */
