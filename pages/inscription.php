@@ -1,5 +1,147 @@
 <?php
 session_start();
+require_once '../includes/config.conf';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm-password'] ?? '';
+    $recaptcha_token = $_POST['g-recaptcha-response'] ?? '';
+    $terms = isset($_POST['terms']);
+
+    $errors = [];
+
+    // Validation
+    if (empty($username) || strlen($username) < 3) {
+        $errors['username'] = 'Le pseudo doit contenir au moins 3 caractères';
+    }
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Veuillez entrer une adresse email valide';
+    }
+
+    if (empty($password) || strlen($password) < 6) {
+        $errors['password'] = 'Le mot de passe doit contenir au moins 6 caractères';
+    }
+
+    if ($password !== $confirm_password) {
+        $errors['confirm-password'] = 'Les mots de passe ne correspondent pas';
+    }
+
+    if (empty($recaptcha_token)) {
+        $errors['captcha'] = 'Veuillez valider le reCAPTCHA';
+    }
+
+    if (!$terms) {
+        $errors['terms'] = 'Vous devez accepter les conditions d\'utilisation';
+    }
+
+    // Verify reCAPTCHA (with cURL to avoid HTTPS wrapper issue)
+    if (empty($errors) && !empty($recaptcha_token)) {
+        $recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify';
+        $recaptcha_data = [
+            'secret' => RECAPTCHA_SECRET_KEY,
+            'response' => $recaptcha_token
+        ];
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $recaptcha_url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($recaptcha_data),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // For local development
+            CURLOPT_TIMEOUT => 10
+        ]);
+        
+        $recaptcha_response = curl_exec($ch);
+        curl_close($ch);
+        
+        $recaptcha_result = json_decode($recaptcha_response);
+        
+        if (!$recaptcha_result || !$recaptcha_result->success) {
+            $errors['captcha'] = 'Échec de la vérification reCAPTCHA';
+        }
+    }
+
+    // If no errors, register user
+    if (empty($errors)) {
+        // Try MySQLi first, fallback to PDO if MySQLi not available
+        try {
+            // Try MySQLi
+            if (class_exists('mysqli')) {
+                $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+                
+                if ($conn->connect_error) {
+                    throw new Exception('Erreur de connexion à la base de données');
+                }
+                
+                // Check if user already exists
+                $stmt = $conn->prepare("SELECT id_utilisateur FROM UTILISATEUR WHERE email = ? OR pseudo = ?");
+                $stmt->bind_param("ss", $email, $username);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows > 0) {
+                    $errors['general'] = 'Un utilisateur avec ce pseudo ou email existe déjà';
+                } else {
+                    // Hash password and insert user
+                    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom) VALUES (?, ?, ?, ?, ?)");
+                    $nom = $username; // Using username as nom for now
+                    $prenom = $username; // Using username as prenom for now
+                    $stmt->bind_param("sssss", $username, $email, $password_hash, $nom, $prenom);
+                    
+                    if ($stmt->execute()) {
+                        $_SESSION['user_id'] = $conn->insert_id;
+                        $_SESSION['username'] = $username;
+                        $_SESSION['email'] = $email;
+                        $_SESSION['logged_in'] = true;
+                        
+                        $success = true;
+                    } else {
+                        $errors['general'] = 'Erreur lors de la création du compte';
+                    }
+                }
+                $stmt->close();
+                $conn->close();
+            } else {
+                // Fallback to PDO
+                $conn = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                
+                // Check if user already exists
+                $stmt = $conn->prepare("SELECT id_utilisateur FROM UTILISATEUR WHERE email = ? OR pseudo = ?");
+                $stmt->execute([$email, $username]);
+                
+                if ($stmt->rowCount() > 0) {
+                    $errors['general'] = 'Un utilisateur avec ce pseudo ou email existe déjà';
+                } else {
+                    // Hash password and insert user
+                    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom) VALUES (?, ?, ?, ?, ?)");
+                    $nom = $username;
+                    $prenom = $username;
+                    
+                    if ($stmt->execute([$username, $email, $password_hash, $nom, $prenom])) {
+                        $_SESSION['user_id'] = $conn->lastInsertId();
+                        $_SESSION['username'] = $username;
+                        $_SESSION['email'] = $email;
+                        $_SESSION['logged_in'] = true;
+                        
+                        $success = true;
+                    } else {
+                        $errors['general'] = 'Erreur lors de la création du compte';
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            $errors['general'] = 'Erreur de connexion à la base de données';
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -14,6 +156,7 @@ session_start();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <style>
+        /* Your existing CSS styles remain the same */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
         * {
@@ -129,7 +272,12 @@ session_start();
             color: #e74c3c;
             font-size: 0.85rem;
             margin-top: 5px;
-            display: none;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-size: 0.85rem;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -198,48 +346,86 @@ session_start();
                             <h2 class="text-2xl font-bold mb-2">Créer un compte</h2>
                             <p class="text-gray-400">Rejoignez notre communauté de cinéphiles</p>
                         </div>
+
+                        <?php if (isset($success) && $success): ?>
+                            <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-6">
+                                <div class="flex items-center">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <span>Compte créé avec succès ! Redirection...</span>
+                                </div>
+                            </div>
+                            <script>
+                                setTimeout(() => {
+                                    window.location.href = '../index.php';
+                                }, 2000);
+                            </script>
+                        <?php endif; ?>
+
+                        <?php if (isset($errors['general'])): ?>
+                            <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6">
+                                <div class="flex items-center">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    <span><?php echo htmlspecialchars($errors['general']); ?></span>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         
-                        <form id="signup-form" class="space-y-6 stagger-animation">
+                        <form method="POST" class="space-y-6 stagger-animation">
                             <div>
                                 <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Pseudo</label>
-                                <input type="text" id="username" class="w-full px-4 py-3 form-input rounded-lg" placeholder="Veuillez renseigner votre pseudo" required>
-                                <div class="error-message" id="username-error"></div>
+                                <input type="text" id="username" name="username" class="w-full px-4 py-3 form-input rounded-lg" placeholder="Veuillez renseigner votre pseudo" 
+                                       value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" required>
+                                <?php if (isset($errors['username'])): ?>
+                                    <div class="error-message"><?php echo htmlspecialchars($errors['username']); ?></div>
+                                <?php endif; ?>
                             </div>
                             
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                                <input type="email" id="email" class="w-full px-4 py-3 form-input rounded-lg" placeholder="votre@email.com" required>
-                                <div class="error-message" id="email-error"></div>
+                                <input type="email" id="email" name="email" class="w-full px-4 py-3 form-input rounded-lg" placeholder="votre@email.com" 
+                                       value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
+                                <?php if (isset($errors['email'])): ?>
+                                    <div class="error-message"><?php echo htmlspecialchars($errors['email']); ?></div>
+                                <?php endif; ?>
                             </div>
                             
                             <div>
                                 <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Mot de passe</label>
-                                <input type="password" id="password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
+                                <input type="password" id="password" name="password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
                                 <div class="password-strength mt-2 text-sm" id="password-strength"></div>
-                                <div class="error-message" id="password-error"></div>
+                                <?php if (isset($errors['password'])): ?>
+                                    <div class="error-message"><?php echo htmlspecialchars($errors['password']); ?></div>
+                                <?php endif; ?>
                             </div>
                             
                             <div>
                                 <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirmer le mot de passe</label>
-                                <input type="password" id="confirm-password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
-                                <div class="error-message" id="confirm-password-error"></div>
+                                <input type="password" id="confirm-password" name="confirm-password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
+                                <?php if (isset($errors['confirm-password'])): ?>
+                                    <div class="error-message"><?php echo htmlspecialchars($errors['confirm-password']); ?></div>
+                                <?php endif; ?>
                             </div>
                             
                             <!-- reCAPTCHA -->
                             <div class="captcha-container flex justify-center my-4">
-                                <div class="g-recaptcha" data-sitekey="6LcrXhMsAAAAAKrE4f5EtzyYoqsYbY9yZtTOdlHU"></div>
+                                <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
                             </div>
-                            <div class="error-message text-center" id="captcha-error"></div>
+                            <?php if (isset($errors['captcha'])): ?>
+                                <div class="error-message text-center"><?php echo htmlspecialchars($errors['captcha']); ?></div>
+                            <?php endif; ?>
                             
                             <div class="flex items-start space-x-3">
-                                <input type="checkbox" id="terms" class="mt-1 form-checkbox rounded bg-gray-700 border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800" required>
+                                <input type="checkbox" id="terms" name="terms" class="mt-1 form-checkbox rounded bg-gray-700 border-gray-600 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-800" 
+                                       <?php echo isset($_POST['terms']) ? 'checked' : ''; ?> required>
                                 <label for="terms" class="text-sm text-gray-300">
                                     J'accepte les <a href="#" class="terms-link">conditions d'utilisation</a>
                                 </label>
                             </div>
-                            <div class="error-message" id="terms-error"></div>
+                            <?php if (isset($errors['terms'])): ?>
+                                <div class="error-message"><?php echo htmlspecialchars($errors['terms']); ?></div>
+                            <?php endif; ?>
                             
-                            <button type="submit" class="w-full py-3 btn-primary rounded-lg font-semibold text-white transition-all duration-300" id="submit-btn">
+                            <button type="submit" class="w-full py-3 btn-primary rounded-lg font-semibold text-white transition-all duration-300">
                                 Créer mon compte
                             </button>
                             
@@ -258,11 +444,8 @@ session_start();
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('signup-form');
             const passwordInput = document.getElementById('password');
-            const confirmPasswordInput = document.getElementById('confirm-password');
             const passwordStrength = document.getElementById('password-strength');
-            const submitBtn = document.getElementById('submit-btn');
             
             // Vérification de la force du mot de passe
             passwordInput.addEventListener('input', function() {
@@ -303,103 +486,6 @@ session_start();
                     passwordStrength.textContent = '';
                 }
             });
-            
-            // Validation du formulaire
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // Réinitialiser les erreurs
-                document.querySelectorAll('.error-message').forEach(el => {
-                    el.style.display = 'none';
-                    el.textContent = '';
-                });
-                
-                let isValid = true;
-                
-                // Validation du pseudo
-                const username = document.getElementById('username').value;
-                if (username.length < 3) {
-                    showError('username-error', 'Le pseudo doit contenir au moins 3 caractères');
-                    isValid = false;
-                }
-                
-                // Validation de l'email
-                const email = document.getElementById('email').value;
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    showError('email-error', 'Veuillez entrer une adresse email valide');
-                    isValid = false;
-                }
-                
-                // Validation du mot de passe
-                const password = passwordInput.value;
-                if (password.length < 6) {
-                    showError('password-error', 'Le mot de passe doit contenir au moins 6 caractères');
-                    isValid = false;
-                }
-                
-                // Validation de la confirmation du mot de passe
-                if (password !== confirmPasswordInput.value) {
-                    showError('confirm-password-error', 'Les mots de passe ne correspondent pas');
-                    isValid = false;
-                }
-                
-                // Validation reCAPTCHA
-                const recaptchaResponse = grecaptcha.getResponse();
-                if (recaptchaResponse.length === 0) {
-                    showError('captcha-error', 'Veuillez valider le reCAPTCHA');
-                    isValid = false;
-                }
-                
-                // Validation des conditions
-                if (!document.getElementById('terms').checked) {
-                    showError('terms-error', 'Vous devez accepter les conditions d\'utilisation');
-                    isValid = false;
-                }
-                
-                if (isValid) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Création du compte...';
-                    
-                    try {
-                        // Simulation d'envoi au serveur
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        
-                        // Ici, vous enverriez les données à votre serveur
-                        // const response = await fetch('/includes/register.php', {
-                        //     method: 'POST',
-                        //     headers: { 'Content-Type': 'application/json' },
-                        //     body: JSON.stringify({
-                        //         username: username,
-                        //         email: email,
-                        //         password: password,
-                        //         recaptcha: recaptchaResponse
-                        //     })
-                        // });
-                        
-                        alert('Votre compte a été créé avec succès ! Bienvenue dans la communauté CineTrack.');
-                        form.reset();
-                        grecaptcha.reset();
-                        
-                        // Redirection vers la page de connexion
-                        setTimeout(() => {
-                            window.location.href = 'connexion.php';
-                        }, 1500);
-                        
-                    } catch (error) {
-                        alert('Une erreur est survenue lors de la création du compte. Veuillez réessayer.');
-                    } finally {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Créer mon compte';
-                    }
-                }
-            });
-            
-            function showError(elementId, message) {
-                const errorElement = document.getElementById(elementId);
-                errorElement.textContent = message;
-                errorElement.style.display = 'block';
-            }
 
             // Animation pour les éléments avec délai
             const staggerElements = document.querySelectorAll('.stagger-animation > *');

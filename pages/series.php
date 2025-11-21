@@ -1,30 +1,28 @@
 <?php
-// films.php - TMDb API Integration
 include '../includes/config.conf';
 
-// Get parameters for filtering
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
 $year_filter = isset($_GET['year']) ? $_GET['year'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Function to fetch movies from TMDb API
-function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
+// Function to fetch TV shows from TMDb API
+function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     $api_key = TMDB_API_KEY;
     $base_url = TMDB_BASE_URL;
     
     // Build the API URL based on filters
     if (!empty($search)) {
-        $url = $base_url . 'search/movie?api_key=' . $api_key . '&query=' . urlencode($search) . '&language=fr-FR&page=' . $page;
+        $url = $base_url . 'search/tv?api_key=' . $api_key . '&query=' . urlencode($search) . '&language=fr-FR&page=' . $page;
     } else {
-        $url = $base_url . 'discover/movie?api_key=' . $api_key . '&language=fr-FR&sort_by=popularity.desc&page=' . $page;
+        $url = $base_url . 'discover/tv?api_key=' . $api_key . '&language=fr-FR&sort_by=popularity.desc&page=' . $page;
         
         if (!empty($genre)) {
             $url .= '&with_genres=' . urlencode($genre);
         }
         
         if (!empty($year)) {
-            $url .= '&primary_release_year=' . urlencode($year);
+            $url .= '&first_air_date_year=' . urlencode($year);
         }
     }
     
@@ -48,19 +46,19 @@ function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
         return [
-            'movies' => $data['results'] ?? [],
+            'tv_shows' => $data['results'] ?? [],
             'total_pages' => $data['total_pages'] ?? 1,
             'total_results' => $data['total_results'] ?? 0
         ];
     }
     
-    return ['movies' => [], 'total_pages' => 1, 'total_results' => 0];
+    return ['tv_shows' => [], 'total_pages' => 1, 'total_results' => 0];
 }
 
-// Function to get genre list from TMDb
-function fetchGenresFromAPI() {
+// Function to get TV genre list from TMDb
+function fetchTVGenresFromAPI() {
     $api_key = TMDB_API_KEY;
-    $url = TMDB_BASE_URL . 'genre/movie/list?api_key=' . $api_key . '&language=fr-FR';
+    $url = TMDB_BASE_URL . 'genre/tv/list?api_key=' . $api_key . '&language=fr-FR';
     
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -83,46 +81,52 @@ function fetchGenresFromAPI() {
         return $data['genres'] ?? [];
     }
     
-    return getDefaultGenres();
+    return getDefaultTVGenres();
 }
 
-function getDefaultGenres() {
+function getDefaultTVGenres() {
     return [
-        ['id' => 28, 'name' => 'Action'],
-        ['id' => 12, 'name' => 'Aventure'],
+        ['id' => 10759, 'name' => 'Action & Aventure'],
+        ['id' => 16, 'name' => 'Animation'],
         ['id' => 35, 'name' => 'Comédie'],
+        ['id' => 80, 'name' => 'Crime'],
+        ['id' => 99, 'name' => 'Documentaire'],
         ['id' => 18, 'name' => 'Drame'],
-        ['id' => 878, 'name' => 'Science-Fiction'],
-        ['id' => 14, 'name' => 'Fantastique'],
-        ['id' => 27, 'name' => 'Horreur'],
-        ['id' => 10749, 'name' => 'Romance'],
-        ['id' => 53, 'name' => 'Thriller'],
-        ['id' => 16, 'name' => 'Animation']
+        ['id' => 10751, 'name' => 'Famille'],
+        ['id' => 10762, 'name' => 'Kids'],
+        ['id' => 9648, 'name' => 'Mystère'],
+        ['id' => 10763, 'name' => 'News'],
+        ['id' => 10764, 'name' => 'Reality'],
+        ['id' => 10765, 'name' => 'Sci-Fi & Fantastique'],
+        ['id' => 10766, 'name' => 'Soap'],
+        ['id' => 10767, 'name' => 'Talk'],
+        ['id' => 10768, 'name' => 'War & Politics'],
+        ['id' => 37, 'name' => 'Western']
     ];
 }
 
 // Fetch data
-$apiData = fetchMoviesFromAPI($search_query, $genre_filter, $year_filter, $page);
-$apiMovies = $apiData['movies'];
+$apiData = fetchTVShowsFromAPI($search_query, $genre_filter, $year_filter, $page);
+$apiTVShows = $apiData['tv_shows'];
 $total_pages = $apiData['total_pages'];
 $total_results = $apiData['total_results'];
 
-$apiGenres = fetchGenresFromAPI();
+$apiGenres = fetchTVGenresFromAPI();
 
-$films = [];
-foreach ($apiMovies as $movie) {
-    if (empty($movie['poster_path'])) continue;
+$series = [];
+foreach ($apiTVShows as $tv) {
+    if (empty($tv['poster_path'])) continue;
     
-    $films[] = [
-        'id_film' => $movie['id'],
-        'titre' => $movie['title'] ?? 'Titre non disponible',
-        'poster' => TMDB_IMAGE_BASE_URL . 'w500' . $movie['poster_path'],
-        'date_sortie' => $movie['release_date'] ?? 'Date inconnue',
-        'description' => $movie['overview'] ?? 'Description non disponible.',
-        'note_moyenne' => $movie['vote_average'] ? round($movie['vote_average'], 1) : 0,
-        'nb_critiques' => $movie['vote_count'] ?? 0,
-        'duree' => null,
-        'realisateur' => 'Information non disponible',
+    $series[] = [
+        'id_serie' => $tv['id'],
+        'titre' => $tv['name'] ?? 'Titre non disponible',
+        'poster' => TMDB_IMAGE_BASE_URL . 'w500' . $tv['poster_path'],
+        'date_premiere' => $tv['first_air_date'] ?? 'Date inconnue',
+        'description' => $tv['overview'] ?? 'Description non disponible.',
+        'note_moyenne' => $tv['vote_average'] ? round($tv['vote_average'], 1) : 0,
+        'nb_critiques' => $tv['vote_count'] ?? 0,
+        'nb_saisons' => $tv['number_of_seasons'] ?? 0,
+        'nb_episodes' => $tv['number_of_episodes'] ?? 0,
         'genres' => []
     ];
 }
@@ -135,27 +139,27 @@ foreach ($apiGenres as $genre) {
     ];
 }
 
-$total_films = count($films);
+$total_series = count($series);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Films - CineTrack</title>
+    <title>Séries TV - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/animations.css">
     <style>
-        .films-hero {
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.1) 0%, rgba(120, 0, 255, 0.1) 100%);
+        .series-hero {
+            background: linear-gradient(135deg, rgba(120, 0, 255, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
             padding: 120px 0 60px;
             position: relative;
             overflow: hidden;
         }
         
-        .films-hero::before {
+        .series-hero::before {
             content: '';
             position: absolute;
             top: 0;
@@ -163,8 +167,8 @@ $total_films = count($films);
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(255, 140, 0, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(120, 0, 255, 0.15) 0%, transparent 50%);
+                radial-gradient(circle at 20% 80%, rgba(120, 0, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 140, 0, 0.15) 0%, transparent 50%);
             filter: blur(60px);
             z-index: -1;
         }
@@ -182,7 +186,7 @@ $total_films = count($films);
         .stat-number {
             font-size: 2rem;
             font-weight: bold;
-            background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+            background: linear-gradient(135deg, #7800ff 0%, #ff8c00 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             display: block;
@@ -225,8 +229,8 @@ $total_films = count($films);
         
         .search-box input:focus {
             outline: none;
-            border-color: #ff8c00;
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+            border-color: #7800ff;
+            box-shadow: 0 0 20px rgba(120, 0, 255, 0.3);
         }
         
         .search-btn {
@@ -234,7 +238,7 @@ $total_films = count($films);
             right: 5px;
             top: 50%;
             transform: translateY(-50%);
-            background: #ff8c00;
+            background: #7800ff;
             border: none;
             border-radius: 50%;
             width: 40px;
@@ -245,7 +249,7 @@ $total_films = count($films);
         }
         
         .search-btn:hover {
-            background: #ff6b00;
+            background: #5a00cc;
             transform: translateY(-50%) scale(1.1);
         }
         
@@ -268,7 +272,7 @@ $total_films = count($films);
         
         .filter-select:focus {
             outline: none;
-            border-color: #ff8c00;
+            border-color: #7800ff;
         }
         
         .clear-filters {
@@ -285,7 +289,7 @@ $total_films = count($films);
             background: rgba(239, 68, 68, 0.3);
         }
         
-        .movies-section {
+        .series-section {
             padding: 4rem 0;
         }
         
@@ -307,14 +311,14 @@ $total_films = count($films);
             font-size: 0.875rem;
         }
         
-        .movies-grid {
+        .series-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 2rem;
             margin-bottom: 3rem;
         }
         
-        .movie-card {
+        .serie-card {
             background: rgba(30, 30, 40, 0.25);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -324,30 +328,30 @@ $total_films = count($films);
             cursor: pointer;
         }
         
-        .movie-card:hover {
+        .serie-card:hover {
             transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 25px 50px rgba(255, 140, 0, 0.25);
-            border-color: rgba(255, 140, 0, 0.3);
+            box-shadow: 0 25px 50px rgba(120, 0, 255, 0.25);
+            border-color: rgba(120, 0, 255, 0.3);
         }
         
-        .movie-poster {
+        .serie-poster {
             position: relative;
             overflow: hidden;
             aspect-ratio: 2/3;
         }
         
-        .movie-poster img {
+        .serie-poster img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s ease;
         }
         
-        .movie-card:hover .movie-poster img {
+        .serie-card:hover .serie-poster img {
             transform: scale(1.1);
         }
         
-        .movie-overlay {
+        .serie-overlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -362,7 +366,7 @@ $total_films = count($films);
             padding: 1rem;
         }
         
-        .movie-card:hover .movie-overlay {
+        .serie-card:hover .serie-overlay {
             opacity: 1;
         }
         
@@ -386,11 +390,11 @@ $total_films = count($films);
         }
         
         .play-btn:hover {
-            background: #ff8c00;
+            background: #7800ff;
             transform: scale(1.1);
         }
         
-        .movie-rating {
+        .serie-rating {
             background: rgba(0, 0, 0, 0.8);
             padding: 0.5rem 1rem;
             border-radius: 20px;
@@ -401,11 +405,11 @@ $total_films = count($films);
             gap: 0.5rem;
         }
         
-        .movie-info {
+        .serie-info {
             padding: 1.5rem;
         }
         
-        .movie-title {
+        .serie-title {
             font-size: 1.1rem;
             font-weight: bold;
             color: white;
@@ -413,7 +417,7 @@ $total_films = count($films);
             line-height: 1.4;
         }
         
-        .movie-meta {
+        .serie-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -421,13 +425,20 @@ $total_films = count($films);
             font-size: 0.875rem;
         }
         
-        .no-movies {
+        .serie-seasons {
+            background: rgba(120, 0, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+        
+        .no-series {
             text-align: center;
             padding: 4rem 2rem;
             color: #9ca3af;
         }
         
-        .no-movies i {
+        .no-series i {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
@@ -451,17 +462,17 @@ $total_films = count($films);
         }
         
         .pagination a:hover {
-            background: #ff8c00;
-            border-color: #ff8c00;
+            background: #7800ff;
+            border-color: #7800ff;
         }
         
         .pagination .current {
-            background: #ff8c00;
-            border-color: #ff8c00;
+            background: #7800ff;
+            border-color: #7800ff;
         }
         
         @media (max-width: 768px) {
-            .movies-grid {
+            .series-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 1rem;
             }
@@ -479,21 +490,22 @@ $total_films = count($films);
     </style>
 </head>
 <body class="gradient-bg text-white">
-    <?php include '../includes/header.php'; ?>    
-    <main class="films-main">
+    <?php include '../includes/header.php'; ?>
+    
+    <main class="series-main">
         <!-- Hero Section -->
-        <section class="films-hero">
+        <section class="series-hero">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="hero-content text-center">
-                    <h1 class="text-5xl md:text-7xl font-black mb-6">🎬 Tous les Films</h1>
-                    <p class="text-xl text-gray-300 mb-8">Découvrez notre vaste collection de films</p>
+                    <h1 class="text-5xl md:text-7xl font-black mb-6">📺 Séries TV</h1>
+                    <p class="text-xl text-gray-300 mb-8">Plongez dans l'univers des séries télévisées</p>
                     <div class="hero-stats justify-center">
                         <div class="stat">
                             <span class="stat-number"><?php echo $total_results; ?></span>
-                            <span class="stat-label">Films</span>
+                            <span class="stat-label">Séries</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number"><?php echo $total_films; ?></span>
+                            <span class="stat-number"><?php echo $total_series; ?></span>
                             <span class="stat-label">Disponibles</span>
                         </div>
                     </div>
@@ -509,7 +521,7 @@ $total_films = count($films);
                         <div class="search-box">
                             <input type="text" 
                                    name="search" 
-                                   placeholder="Rechercher un film..." 
+                                   placeholder="Rechercher une série..." 
                                    value="<?php echo htmlspecialchars($search_query); ?>">
                             <button type="submit" class="search-btn">
                                 <i class="fas fa-search"></i>
@@ -539,7 +551,7 @@ $total_films = count($films);
                         </select>
                         
                         <?php if($search_query || $genre_filter || $year_filter): ?>
-                            <a href="films.php" class="clear-filters">
+                            <a href="series.php" class="clear-filters">
                                 <i class="fas fa-times"></i> Effacer
                             </a>
                         <?php endif; ?>
@@ -548,8 +560,8 @@ $total_films = count($films);
             </div>
         </section>
 
-        <!-- Movies Grid Section -->
-        <section class="movies-section">
+        <!-- Series Grid Section -->
+        <section class="series-section">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="section-header">
                     <h2 class="section-title">
@@ -565,55 +577,54 @@ $total_films = count($films);
                                 }
                             }
                             ?>
-                            Films <?php echo htmlspecialchars($genre_name); ?>
+                            Séries <?php echo htmlspecialchars($genre_name); ?>
                         <?php else: ?>
-                            Films Populaires
+                            Séries Populaires
                         <?php endif; ?>
                     </h2>
                     <div class="results-count">
-                        <?php echo $total_results; ?> film<?php echo $total_results > 1 ? 's' : ''; ?> trouvé<?php echo $total_results > 1 ? 's' : ''; ?>
+                        <?php echo $total_results; ?> série<?php echo $total_results > 1 ? 's' : ''; ?> trouvée<?php echo $total_results > 1 ? 's' : ''; ?>
                     </div>
                 </div>
 
-                <?php if(empty($films)): ?>
-                    <div class="no-movies">
-                        <i class="fas fa-film"></i>
-                        <h3 class="text-2xl font-bold mb-4">Aucun film trouvé</h3>
+                <?php if(empty($series)): ?>
+                    <div class="no-series">
+                        <i class="fas fa-tv"></i>
+                        <h3 class="text-2xl font-bold mb-4">Aucune série trouvée</h3>
                         <p class="text-gray-400 mb-6">Essayez de modifier vos critères de recherche</p>
-                        <a href="films.php" class="btn-primary px-6 py-3 rounded-xl font-semibold">Voir tous les films</a>
+                        <a href="series.php" class="btn-primary px-6 py-3 rounded-xl font-semibold">Voir toutes les séries</a>
                     </div>
                 <?php else: ?>
-                    <div class="movies-grid">
-                        <?php foreach($films as $film): ?>
-                            <div class="movie-card">
-                                <div class="movie-poster">
-                                    <img src="<?php echo $film['poster']; ?>" 
-                                         alt="<?php echo htmlspecialchars($film['titre']); ?>"
+                    <div class="series-grid">
+                        <?php foreach($series as $serie): ?>
+                            <div class="serie-card">
+                                <div class="serie-poster">
+                                    <img src="<?php echo $serie['poster']; ?>" 
+                                         alt="<?php echo htmlspecialchars($serie['titre']); ?>"
                                          loading="lazy">
-                                    <div class="movie-overlay">
+                                    <div class="serie-overlay">
                                         <div class="flex justify-between">
                                             <button class="favorite-btn">
                                                 <i class="far fa-heart"></i>
                                             </button>
-                                            <button class="play-btn" onclick="viewMovie(<?php echo $film['id_film']; ?>)">
+                                            <button class="play-btn" onclick="viewSerie(<?php echo $serie['id_serie']; ?>)">
                                                 <i class="fas fa-play"></i>
                                             </button>
                                         </div>
-                                        <div class="movie-rating">
+                                        <div class="serie-rating">
                                             <i class="fas fa-star"></i>
-                                            <span><?php echo number_format($film['note_moyenne'], 1); ?></span>
+                                            <span><?php echo number_format($serie['note_moyenne'], 1); ?></span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="movie-info">
-                                    <h3 class="movie-title"><?php echo htmlspecialchars($film['titre']); ?></h3>
-                                    <div class="movie-meta">
-                                        <span class="movie-year">
-                                            <?php echo !empty($film['date_sortie']) ? date('Y', strtotime($film['date_sortie'])) : 'N/A'; ?>
+                                <div class="serie-info">
+                                    <h3 class="serie-title"><?php echo htmlspecialchars($serie['titre']); ?></h3>
+                                    <div class="serie-meta">
+                                        <span class="serie-year">
+                                            <?php echo !empty($serie['date_premiere']) ? date('Y', strtotime($serie['date_premiere'])) : 'N/A'; ?>
                                         </span>
-                                        <span class="movie-reviews">
-                                            <i class="fas fa-comment"></i>
-                                            <?php echo $film['nb_critiques']; ?>
+                                        <span class="serie-seasons">
+                                            <?php echo $serie['nb_saisons']; ?> saison<?php echo $serie['nb_saisons'] > 1 ? 's' : ''; ?>
                                         </span>
                                     </div>
                                 </div>
@@ -653,9 +664,9 @@ $total_films = count($films);
     <?php include '../footer.php'; ?>
     
     <script>
-    function viewMovie(movieId) {
-        // Redirect to movie details page or show modal
-        window.location.href = 'movie-details.php?id=' + movieId;
+    function viewSerie(serieId) {
+        // Redirect to serie details page or show modal
+        window.location.href = 'serie-details.php?id=' + serieId;
     }
     
     // Auto-submit form when filters change

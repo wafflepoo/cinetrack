@@ -135,7 +135,7 @@ session_start();
                             <input type="checkbox" class="rounded bg-gray-700 border-gray-600 text-orange-500 focus:ring-orange-500">
                             <span class="ml-2 text-sm text-gray-300">Se souvenir de moi</span>
                         </label>
-                        <a href="#" class="text-sm text-orange-500 hover:text-orange-400 transition-all duration-300">
+                        <a href="/forgotPassword.php" class="text-sm text-orange-500 hover:text-orange-400 transition-all duration-300">
                             Mot de passe oublié ?
                         </a>
                     </div>
