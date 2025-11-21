@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => http_build_query($recaptcha_data),
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false, // For local development
+            CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_TIMEOUT => 10
         ]);
         
@@ -68,6 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // If no errors, register user
     if (empty($errors)) {
+        // Generate verification token
+        $verification_token = bin2hex(random_bytes(32));
+        $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        
         // Try MySQLi first, fallback to PDO if MySQLi not available
         try {
             // Try MySQLi
@@ -87,20 +91,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result->num_rows > 0) {
                     $errors['general'] = 'Un utilisateur avec ce pseudo ou email existe déjà';
                 } else {
-                    // Hash password and insert user
+                    // Hash password and insert user with verification token
                     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom) VALUES (?, ?, ?, ?, ?)");
-                    $nom = $username; // Using username as nom for now
-                    $prenom = $username; // Using username as prenom for now
-                    $stmt->bind_param("sssss", $username, $email, $password_hash, $nom, $prenom);
+                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom, verification_token, token_expiry, est_verifie) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $nom = $username;
+                    $prenom = $username;
+                    $est_verifie = 0;
+                    $stmt->bind_param("sssssssi", $username, $email, $password_hash, $nom, $prenom, $verification_token, $token_expiry, $est_verifie);
                     
                     if ($stmt->execute()) {
-                        $_SESSION['user_id'] = $conn->insert_id;
-                        $_SESSION['username'] = $username;
-                        $_SESSION['email'] = $email;
-                        $_SESSION['logged_in'] = true;
+                        $user_id = $conn->insert_id;
                         
-                        $success = true;
+                        // Send verification email
+                        if (sendVerificationEmail($email, $username, $verification_token)) {
+                            $success = true;
+                            $email_sent = true;
+                        } else {
+                            // If email fails, delete the user and show error
+                            $conn->query("DELETE FROM UTILISATEUR WHERE id_utilisateur = $user_id");
+                            $errors['general'] = 'Erreur lors de l\'envoi de l\'email de vérification. Veuillez réessayer.';
+                        }
                     } else {
                         $errors['general'] = 'Erreur lors de la création du compte';
                     }
@@ -119,19 +129,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmt->rowCount() > 0) {
                     $errors['general'] = 'Un utilisateur avec ce pseudo ou email existe déjà';
                 } else {
-                    // Hash password and insert user
+                    // Hash password and insert user with verification token
                     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom) VALUES (?, ?, ?, ?, ?)");
                     $nom = $username;
                     $prenom = $username;
+                    $est_verifie = 0;
                     
-                    if ($stmt->execute([$username, $email, $password_hash, $nom, $prenom])) {
-                        $_SESSION['user_id'] = $conn->lastInsertId();
-                        $_SESSION['username'] = $username;
-                        $_SESSION['email'] = $email;
-                        $_SESSION['logged_in'] = true;
+                    $stmt = $conn->prepare("INSERT INTO UTILISATEUR (pseudo, email, mot_de_passe, nom, prenom, verification_token, token_expiry, est_verifie) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    
+                    if ($stmt->execute([$username, $email, $password_hash, $nom, $prenom, $verification_token, $token_expiry, $est_verifie])) {
+                        $user_id = $conn->lastInsertId();
                         
-                        $success = true;
+                        // Send verification email
+                        if (sendVerificationEmail($email, $username, $verification_token)) {
+                            $success = true;
+                            $email_sent = true;
+                        } else {
+                            // If email fails, delete the user and show error
+                            $conn->query("DELETE FROM UTILISATEUR WHERE id_utilisateur = $user_id");
+                            $errors['general'] = 'Erreur lors de l\'envoi de l\'email de vérification. Veuillez réessayer.';
+                        }
                     } else {
                         $errors['general'] = 'Erreur lors de la création du compte';
                     }
@@ -141,6 +158,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['general'] = 'Erreur de connexion à la base de données';
         }
     }
+}
+
+// Function to send verification email - VERSION POUR DÉVELOPPEMENT LOCAL
+// Function to send verification email - VERSION POUR PRODUCTION
+// Function to send verification email - VERSION RÉELLE
+function sendVerificationEmail($email, $username, $token) {
+    // URL ABSOLUE pour votre hébergement AlwaysData
+    $verification_link = "https://cinetrack.alwaysdata.net/pages/verify_email.php?token=" . $token;
+    
+    // Sujet de l'email
+    $subject = "Activez votre compte CineTrack";
+    
+    // Corps de l'email en HTML
+    $message = "
+    <html>
+    <head>
+        <title>Activation de votre compte CineTrack</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+            .container { background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto; }
+            .header { text-align: center; color: #ff8c00; }
+            .button { background: #ff8c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+            .footer { margin-top: 30px; font-size: 12px; color: #666; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <h1>CineTrack</h1>
+            </div>
+            <h2>Bonjour $username,</h2>
+            <p>Merci de vous être inscrit sur <strong>CineTrack</strong> !</p>
+            <p>Pour activer votre compte et commencer à explorer notre univers cinématographique, veuillez cliquer sur le bouton ci-dessous :</p>
+            
+            <div style='text-align: center;'>
+                <a href='$verification_link' class='button'>Activer mon compte</a>
+            </div>
+            
+            <p>Ou copiez-collez ce lien dans votre navigateur :</p>
+            <p style='word-break: break-all; background: #f8f8f8; padding: 10px; border-radius: 5px;'>$verification_link</p>
+            
+            <p><strong>Attention :</strong> Ce lien expirera dans 24 heures.</p>
+            
+            <div class='footer'>
+                <p>Si vous n'avez pas créé de compte sur CineTrack, veuillez ignorer cet email.</p>
+                <p>© 2024 CineTrack. Tous droits réservés.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    ";
+    
+    // Version texte pour les clients email qui ne supportent pas HTML
+    $message_text = "
+    Bonjour $username,
+    
+    Merci de vous être inscrit sur CineTrack !
+    
+    Pour activer votre compte, veuillez cliquer sur le lien suivant :
+    
+    $verification_link
+    
+    Ce lien expirera dans 24 heures.
+    
+    Si vous n'avez pas créé de compte sur CineTrack, veuillez ignorer cet email.
+    
+    Cordialement,
+    L'équipe CineTrack
+    ";
+    
+    // En-têtes de l'email
+    $headers = "MIME-Version: 1.0" . "\r\n";
+    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+    $headers .= "From: no-reply@cinetrack.alwaysdata.net" . "\r\n";
+    $headers .= "Reply-To: no-reply@cinetrack.alwaysdata.net" . "\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion();
+    
+    // Envoi de l'email
+    $email_sent = mail($email, $subject, $message, $headers);
+    
+    // Log pour débogage
+    error_log("=== TENTATIVE D'ENVOI D'EMAIL ===");
+    error_log("Destinataire: " . $email);
+    error_log("Lien de vérification: " . $verification_link);
+    error_log("Email envoyé: " . ($email_sent ? "OUI" : "NON"));
+    error_log("=====================================");
+    
+    return $email_sent;
 }
 ?>
 <!DOCTYPE html>
@@ -156,7 +261,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <style>
-        /* Your existing CSS styles remain the same */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
         * {
@@ -347,19 +451,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <p class="text-gray-400">Rejoignez notre communauté de cinéphiles</p>
                         </div>
 
-                        <?php if (isset($success) && $success): ?>
-                            <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-6">
-                                <div class="flex items-center">
-                                    <i class="fas fa-check-circle mr-2"></i>
-                                    <span>Compte créé avec succès ! Redirection...</span>
-                                </div>
-                            </div>
-                            <script>
-                                setTimeout(() => {
-                                    window.location.href = '../index.php';
-                                }, 2000);
-                            </script>
-                        <?php endif; ?>
+                        <?php if (isset($success) && $success && isset($email_sent) && $email_sent): ?>
+    <div class="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-envelope-circle-check mr-2"></i>
+            <span>
+                <strong>Compte créé avec succès !</strong><br>
+                Un email de vérification a été envoyé à <strong><?php echo htmlspecialchars($email); ?></strong><br>
+                <small class="text-gray-400">Veuillez consulter votre boîte mail et cliquer sur le lien pour activer votre compte.</small>
+            </span>
+        </div>
+    </div>
+<?php endif; ?>
+<?php if (isset($success) && $success && isset($email_sent) && !$email_sent): ?>
+    <div class="bg-yellow-500/20 border border-yellow-500 text-yellow-300 px-4 py-3 rounded-lg mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <span>
+                <strong>Compte créé mais problème d'envoi d'email</strong><br>
+                <small class="text-gray-400">Veuillez contacter le support pour activer votre compte.</small>
+            </span>
+        </div>
+    </div>
+<?php endif; ?>
 
                         <?php if (isset($errors['general'])): ?>
                             <div class="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6">
