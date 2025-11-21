@@ -1,12 +1,12 @@
 <?php
-include '../includes/config.conf';
+include '../includes/config.conf.php'; // CORRECTION: .conf → .php
 
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
 $year_filter = isset($_GET['year']) ? $_GET['year'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Function to fetch TV shows from TMDb API
+// Function to fetch TV shows from TMDb API - CORRIGÉE
 function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     $api_key = TMDB_API_KEY;
     $base_url = TMDB_BASE_URL;
@@ -31,12 +31,9 @@ function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . TMDB_ACCESS_TOKEN,
-            'Content-Type: application/json;charset=utf-8'
-        ],
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_USERAGENT => 'CineTrack/1.0'
+        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -52,10 +49,11 @@ function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         ];
     }
     
+    error_log("TMDb TV API Error: HTTP $http_code - URL: $url");
     return ['tv_shows' => [], 'total_pages' => 1, 'total_results' => 0];
 }
 
-// Function to get TV genre list from TMDb
+// Function to get TV genre list from TMDb - CORRIGÉE
 function fetchTVGenresFromAPI() {
     $api_key = TMDB_API_KEY;
     $url = TMDB_BASE_URL . 'genre/tv/list?api_key=' . $api_key . '&language=fr-FR';
@@ -65,11 +63,8 @@ function fetchTVGenresFromAPI() {
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . TMDB_ACCESS_TOKEN,
-            'Content-Type: application/json;charset=utf-8'
-        ],
         CURLOPT_SSL_VERIFYPEER => false
+        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -81,6 +76,7 @@ function fetchTVGenresFromAPI() {
         return $data['genres'] ?? [];
     }
     
+    error_log("TMDb TV Genres API Error: HTTP $http_code");
     return getDefaultTVGenres();
 }
 
@@ -661,7 +657,7 @@ $total_series = count($series);
         </section>
     </main>
     
-    <?php include '../footer.php'; ?>
+    <?php include '../includes/footer.php'; ?> <!-- CORRECTION: includes/footer.php -->
     
     <script>
     function viewSerie(serieId) {

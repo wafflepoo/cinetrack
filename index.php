@@ -1,8 +1,8 @@
 <?php
 session_start();
-include 'includes/config.conf';
+include 'includes/config.conf.php'; // Changez .conf en .php
 
-// Function to fetch trending movies from TMDb API
+// Function to fetch trending movies from TMDb API - CORRIGÉE
 function fetchTrendingMovies() {
     $api_key = TMDB_API_KEY;
     $url = TMDB_BASE_URL . 'trending/movie/week?api_key=' . $api_key . '&language=fr-FR';
@@ -12,11 +12,9 @@ function fetchTrendingMovies() {
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . TMDB_ACCESS_TOKEN,
-            'Content-Type: application/json;charset=utf-8'
-        ],
         CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'CineTrack/1.0'
+        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -25,10 +23,11 @@ function fetchTrendingMovies() {
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
-        return array_slice($data['results'] ?? [], 0, 8); // Get first 4 trending movies
+        return $data['results'] ?? [];
+    } else {
+        error_log("TMDb API Error: HTTP $http_code - URL: $url");
+        return [];
     }
-    
-    return []; // Return empty if API fails
 }
 
 // Fetch trending movies from API

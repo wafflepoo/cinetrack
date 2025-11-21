@@ -1,6 +1,6 @@
 <?php
 // films.php - TMDb API Integration
-include '../includes/config.conf';
+include '../includes/config.conf.php'; // CORRECTION: .conf.php → .php
 
 // Get parameters for filtering
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -8,7 +8,7 @@ $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
 $year_filter = isset($_GET['year']) ? $_GET['year'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Function to fetch movies from TMDb API
+// Function to fetch movies from TMDb API - CORRIGÉE
 function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     $api_key = TMDB_API_KEY;
     $base_url = TMDB_BASE_URL;
@@ -33,12 +33,9 @@ function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . TMDB_ACCESS_TOKEN,
-            'Content-Type: application/json;charset=utf-8'
-        ],
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_USERAGENT => 'CineTrack/1.0'
+        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -54,10 +51,11 @@ function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         ];
     }
     
+    error_log("TMDb API Error: HTTP $http_code - URL: $url");
     return ['movies' => [], 'total_pages' => 1, 'total_results' => 0];
 }
 
-// Function to get genre list from TMDb
+// Function to get genre list from TMDb - CORRIGÉE
 function fetchGenresFromAPI() {
     $api_key = TMDB_API_KEY;
     $url = TMDB_BASE_URL . 'genre/movie/list?api_key=' . $api_key . '&language=fr-FR';
@@ -67,11 +65,8 @@ function fetchGenresFromAPI() {
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . TMDB_ACCESS_TOKEN,
-            'Content-Type: application/json;charset=utf-8'
-        ],
         CURLOPT_SSL_VERIFYPEER => false
+        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -83,6 +78,7 @@ function fetchGenresFromAPI() {
         return $data['genres'] ?? [];
     }
     
+    error_log("TMDb Genres API Error: HTTP $http_code");
     return getDefaultGenres();
 }
 
@@ -650,7 +646,7 @@ $total_films = count($films);
         </section>
     </main>
     
-    <?php include '../footer.php'; ?>
+    <?php include '../includes/footer.php'; ?> <!-- CORRECTION: includes/footer.php -->
     
     <script>
     function viewMovie(movieId) {
