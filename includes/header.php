@@ -1,5 +1,5 @@
 <?php
-// SMART HEADER - Adapts to login status with FIXED paths
+// SMART HEADER - Adapts to login status with FIXED paths (NO AUTH)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -14,32 +14,22 @@ $currentUser = $isLoggedIn ? [
     'prenom' => $_SESSION['user_prenom'] ?? ''
 ] : null;
 
-// Detect current directory for proper links - FIXED VERSION
+// Detect current directory for proper links - REMOVED AUTH
 $current_file = $_SERVER['PHP_SELF'];
 $is_in_pages = strpos($current_file, '/pages/') !== false;
 $is_in_user = strpos($current_file, '/user/') !== false;
-$is_in_auth = strpos($current_file, '/auth/') !== false;
 
-// Calculate base path correctly
+// Calculate base path correctly - SIMPLIFIED
 if ($is_in_user) {
     // When in /pages/user/ directory, go up 2 levels to reach root
     $base_path = '../../';
-} elseif ($is_in_pages && !$is_in_user) {
-    // When in /pages/ directory (but not in user), go up 1 level
-    $base_path = '../';
-} elseif ($is_in_auth) {
-    // When in /auth/ directory
+} elseif ($is_in_pages) {
+    // When in /pages/ directory, go up 1 level
     $base_path = '../';
 } else {
     // When in root directory
     $base_path = '';
 }
-
-// Debug paths (remove this in production)
-// error_log("Current file: $current_file");
-// error_log("Base path: $base_path");
-// error_log("In pages: " . ($is_in_pages ? 'yes' : 'no'));
-// error_log("In user: " . ($is_in_user ? 'yes' : 'no'));
 ?>
 
 <header class="fixed top-0 w-full bg-gray-900/95 backdrop-blur-lg border-b border-gray-800 z-50">
