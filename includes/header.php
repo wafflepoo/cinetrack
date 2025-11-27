@@ -130,7 +130,7 @@ if ($is_in_user) {
                                     <i class="fas fa-cog mr-3"></i>Paramètres
                                 </a>
                                 <div class="border-t border-gray-700 my-2"></div>
-                                <a href="<?php echo $base_path; ?>auth/logout.php" class="dropdown-item text-red-400 hover:text-red-300">
+                                <a href="<?php echo $base_path; ?>pages/logout.php" class="dropdown-item text-red-400 hover:text-red-300">
                                     <i class="fas fa-sign-out-alt mr-3"></i>Déconnexion
                                 </a>
                             </div>
@@ -140,10 +140,10 @@ if ($is_in_user) {
                 <?php else: ?>
                     <!-- GUEST AUTH BUTTONS -->
                     <div class="flex items-center space-x-3">
-                        <a href="<?php echo $base_path; ?>auth/login.php" class="text-gray-300 hover:text-orange-500 transition-all duration-300 font-medium">
+                        <a href="<?php echo $base_path; ?>pages/connexion.php" class="text-gray-300 hover:text-orange-500 transition-all duration-300 font-medium">
                             Connexion
                         </a>
-                        <a href="<?php echo $base_path; ?>auth/register.php" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
+                        <a href="<?php echo $base_path; ?>pages/inscription.php" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                             S'inscrire
                         </a>
                     </div>
