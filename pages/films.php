@@ -544,125 +544,67 @@ $total_films = count($films);
             </div>
         </section>
 
-        <!-- Movies Grid Section -->
-        <section class="movies-section">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <?php if($search_query): ?>
-                            Résultats pour "<?php echo htmlspecialchars($search_query); ?>"
-                        <?php elseif($genre_filter): ?>
-                            <?php 
-                            $genre_name = 'Genre';
-                            foreach($genres as $genre) {
-                                if($genre['id'] == $genre_filter) {
-                                    $genre_name = $genre['name'];
-                                    break;
-                                }
-                            }
-                            ?>
-                            Films <?php echo htmlspecialchars($genre_name); ?>
-                        <?php else: ?>
-                            Films Populaires
-                        <?php endif; ?>
-                    </h2>
-                    <div class="results-count">
-                        <?php echo $total_results; ?> film<?php echo $total_results > 1 ? 's' : ''; ?> trouvé<?php echo $total_results > 1 ? 's' : ''; ?>
+<div class="movies-grid">
+    <?php foreach($films as $film): ?>
+        <div class="movie-card" onclick="viewMovieDetails(<?php echo $film['id_film']; ?>)">
+            <div class="movie-poster">
+                <img src="<?php echo $film['poster']; ?>" 
+                     alt="<?php echo htmlspecialchars($film['titre']); ?>"
+                     loading="lazy">
+                <div class="movie-overlay">
+                    <div class="flex justify-between">
+                        <button class="favorite-btn" onclick="event.stopPropagation(); addToWatchlist(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>')">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <button class="play-btn" onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                    <div class="movie-rating">
+                        <i class="fas fa-star"></i>
+                        <span><?php echo number_format($film['note_moyenne'], 1); ?></span>
                     </div>
                 </div>
-
-                <?php if(empty($films)): ?>
-                    <div class="no-movies">
-                        <i class="fas fa-film"></i>
-                        <h3 class="text-2xl font-bold mb-4">Aucun film trouvé</h3>
-                        <p class="text-gray-400 mb-6">Essayez de modifier vos critères de recherche</p>
-                        <a href="films.php" class="btn-primary px-6 py-3 rounded-xl font-semibold">Voir tous les films</a>
-                    </div>
-                <?php else: ?>
-                    <div class="movies-grid">
-                        <?php foreach($films as $film): ?>
-                            <div class="movie-card">
-                                <div class="movie-poster">
-                                    <img src="<?php echo $film['poster']; ?>" 
-                                         alt="<?php echo htmlspecialchars($film['titre']); ?>"
-                                         loading="lazy">
-                                    <div class="movie-overlay">
-                                        <div class="flex justify-between">
-                                            <button class="favorite-btn">
-                                                <i class="far fa-heart"></i>
-                                            </button>
-                                            <button class="play-btn" onclick="viewMovie(<?php echo $film['id_film']; ?>)">
-                                                <i class="fas fa-play"></i>
-                                            </button>
-                                        </div>
-                                        <div class="movie-rating">
-                                            <i class="fas fa-star"></i>
-                                            <span><?php echo number_format($film['note_moyenne'], 1); ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="movie-info">
-                                    <h3 class="movie-title"><?php echo htmlspecialchars($film['titre']); ?></h3>
-                                    <div class="movie-meta">
-                                        <span class="movie-year">
-                                            <?php echo !empty($film['date_sortie']) ? date('Y', strtotime($film['date_sortie'])) : 'N/A'; ?>
-                                        </span>
-                                        <span class="movie-reviews">
-                                            <i class="fas fa-comment"></i>
-                                            <?php echo $film['nb_critiques']; ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <!-- Pagination -->
-                    <?php if($total_pages > 1): ?>
-                        <div class="pagination">
-                            <?php if($page > 1): ?>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                            <?php endif; ?>
-                            
-                            <?php for($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                <?php if($i == $page): ?>
-                                    <span class="current"><?php echo $i; ?></span>
-                                <?php else: ?>
-                                    <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                                <?php endif; ?>
-                            <?php endfor; ?>
-                            
-                            <?php if($page < $total_pages): ?>
-                                <a href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
             </div>
-        </section>
-    </main>
-    
-    <?php include '../includes/footer.php'; ?> <!-- CORRECTION: includes/footer.php -->
-    
-    <script>
-    function viewMovie(movieId) {
-        // Redirect to movie details page or show modal
-        window.location.href = 'movie-details.php?id=' + movieId;
-    }
-    
-    // Auto-submit form when filters change
-    document.addEventListener('DOMContentLoaded', function() {
-        const filterSelects = document.querySelectorAll('select[name="genre"], select[name="year"]');
-        filterSelects.forEach(select => {
-            select.addEventListener('change', function() {
-                document.querySelector('.filters-form').submit();
-            });
-        });
+            <div class="movie-info">
+                <h3 class="movie-title"><?php echo htmlspecialchars($film['titre']); ?></h3>
+                <div class="movie-meta">
+                    <span class="movie-year">
+                        <?php echo !empty($film['date_sortie']) ? date('Y', strtotime($film['date_sortie'])) : 'N/A'; ?>
+                    </span>
+                    <span class="movie-reviews">
+                        <i class="fas fa-comment"></i>
+                        <?php echo $film['nb_critiques']; ?>
+                    </span>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<script>
+function viewMovieDetails(movieId) {
+    window.location.href = 'movie-details.php?id=' + movieId;
+}
+function addToWatchlist(movieId, movieTitle, moviePoster) {
+    // AJAX call to add to watchlist
+    fetch('/add_to_watchlist.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'movie_id=' + movieId + '&movie_title=' + encodeURIComponent(movieTitle) + '&movie_poster=' + encodeURIComponent(moviePoster)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            showNotification('Film ajouté à votre watchlist!', 'success');
+        } else {
+            showNotification('Erreur: ' + data.message, 'error');
+        }
     });
-    </script>
+}
+</script>
 </body>
 </html>
