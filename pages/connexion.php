@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_role'] = $user['role'];
             
             // Redirect to intended page or dashboard
-            $redirect = $_SESSION['redirect_after_login'] ?? '/user/dashboard.php';
+            $redirect = $_SESSION['redirect_after_login'] ?? '/pages/user/dashboard.php';
             unset($_SESSION['redirect_after_login']);
             header('Location: ' . $redirect);
             exit;
