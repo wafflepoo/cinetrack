@@ -31,8 +31,8 @@
             <div class="fade-in" style="transition-delay: 0.1s;">
                 <h4 class="font-bold mb-4">Découvrir</h4>
                 <ul class="space-y-2 text-gray-400">
-                    <li><a href="includes/components/films.php" class="hover:text-orange-500 transition-all duration-300">Films</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Séries</a></li>
+                    <li><a href="../pages/films.php" class="hover:text-orange-500 transition-all duration-300">Films</a></li>
+                    <li><a href="../pages/series.php" class="hover:text-orange-500 transition-all duration-300">Séries</a></li>
                     <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Tendances</a></li>
                     <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Genres</a></li>
                 </ul>
@@ -41,26 +41,20 @@
             <div class="fade-in" style="transition-delay: 0.2s;">
                 <h4 class="font-bold mb-4">Communauté</h4>
                 <ul class="space-y-2 text-gray-400">
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Critiques</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Listes</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Membres</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Forums</a></li>
-                </ul>
+                    <li><a href="../pages/user/reviews.php" class="hover:text-orange-500 transition-all duration-300">Critiques</a></li>
+                    <li><a href="../pages/user/lists.php" class="hover:text-orange-500 transition-all duration-300">Listes</a></li>
+                    </ul>
             </div>
             
             <div class="fade-in" style="transition-delay: 0.3s;">
                 <h4 class="font-bold mb-4">À propos</h4>
                 <ul class="space-y-2 text-gray-400">
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">À propos</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Contact</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">Blog</a></li>
-                    <li><a href="#" class="hover:text-orange-500 transition-all duration-300">API</a></li>
-                </ul>
+                    <li><a href="../pages/contact.php" class="hover:text-orange-500 transition-all duration-300">Contact</a></li>
             </div>
         </div>
         
         <div class="border-t border-gray-800 pt-8 text-center text-gray-400 fade-in">
-            <p>&copy; 2024 CineTrack. Tous droits réservés.</p>
+            <p>&copy; 2026 CineTrack. Tous droits réservés.</p>
         </div>
     </div>
 </footer>
