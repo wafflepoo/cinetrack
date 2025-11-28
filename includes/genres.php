@@ -27,254 +27,48 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-animation genres-container">
-            <!-- Action -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
+            <?php foreach($genres_with_counts as $genre): ?>
+            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" 
+                 data-category="movies series"
+                 onclick="navigateToGenre('<?php echo $genre['id']; ?>', '<?php echo urlencode($genre['name']); ?>')">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
                 <img 
-                    src="https://images.unsplash.com/photo-1594909122845-11baa439b7bf?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Action" 
+                    src="<?php echo $genre['image']; ?>" 
+                    alt="<?php echo htmlspecialchars($genre['name']); ?>" 
                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
                 >
                 <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
                     <div class="flex items-center justify-between mb-3">
                         <div class="text-3xl text-orange-500">
-                            <i class="fas fa-explosion"></i>
+                            <i class="fas <?php echo $genre['icon']; ?>"></i>
                         </div>
                     </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Action</h3>
+                    <h3 class="text-2xl font-bold text-white mb-4"><?php echo htmlspecialchars($genre['name']); ?></h3>
                     <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.8K films
+                        <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold movies-count">
+                            <?php echo formatCount($genre['movie_count']); ?> films
                         </span>
-                        <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            700 séries
+                        <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold series-count">
+                            <?php echo formatCount($genre['series_count']); ?> séries
                         </span>
                     </div>
                     <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Adrénaline pure et scènes spectaculaires
+                        Découvrez notre collection <?php echo htmlspecialchars($genre['name']); ?>
                     </p>
                 </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-orange-500/50 rounded-2xl transition-all duration-500 z-30"></div>
+                <div class="absolute inset-0 border-2 border-transparent group-hover:<?php echo $genre['hover_color']; ?> rounded-2xl transition-all duration-500 z-30"></div>
             </div>
-
-            <!-- Drame -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1485846234645-a62644f84728?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Drame" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-purple-500">
-                            <i class="fas fa-masks-theater"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Drame</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-purple-500/20 text-purple-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.2K films
-                        </span>
-                        <span class="bg-purple-500/20 text-purple-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            600 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Émotions intenses et histoires poignantes
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-purple-500/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Comédie -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Comédie" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-yellow-500">
-                            <i class="fas fa-face-laugh-beam"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Comédie</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.5K films
-                        </span>
-                        <span class="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            600 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Rires garantis et moments légers
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-yellow-500/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Romance -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1534447677768-be436bb09401?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Romance" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-pink-500">
-                            <i class="fas fa-heart"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Romance</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-pink-500/20 text-pink-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.1K films
-                        </span>
-                        <span class="bg-pink-500/20 text-pink-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            400 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Histoires d'amour et passions dévorantes
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-pink-500/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Aventure -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Aventure" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-blue-500">
-                            <i class="fas fa-mountain-sun"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Aventure</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-blue-500/20 text-blue-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.3K films
-                        </span>
-                        <span class="bg-blue-500/20 text-blue-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            600 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Voyages épiques et découvertes extraordinaires
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-blue-500/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Horreur -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1509248961154-6c975d1301c4?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Horreur" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-red-600">
-                            <i class="fas fa-ghost"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Horreur</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-red-600/20 text-red-600 px-2 py-1 rounded-full text-xs font-semibold">
-                            800 films
-                        </span>
-                        <span class="bg-red-600/20 text-red-600 px-2 py-1 rounded-full text-xs font-semibold">
-                            400 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Frissons et suspense au rendez-vous
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-red-600/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Sci-Fi -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Sci-Fi" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-indigo-500">
-                            <i class="fas fa-rocket"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Sci-Fi</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-indigo-500/20 text-indigo-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            1.1K films
-                        </span>
-                        <span class="bg-indigo-500/20 text-indigo-500 px-2 py-1 rounded-full text-xs font-semibold">
-                            500 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Futur, technologie et univers infinis
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-indigo-500/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
-
-            <!-- Fantastique -->
-            <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" data-category="movies series">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
-                <img 
-                    src="https://images.unsplash.com/photo-1460881680858-30d872d5b530?ixlib=rb-4.0.3&w=400&h=500&fit=crop" 
-                    alt="Fantastique" 
-                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                >
-                <div class="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-all duration-500 group-hover:-translate-y-2">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-3xl text-purple-400">
-                            <i class="fas fa-hat-wizard"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-4">Fantastique</h3>
-                    <div class="flex space-x-2 mb-2 transform translate-y-2">
-                        <span class="bg-purple-400/20 text-purple-400 px-2 py-1 rounded-full text-xs font-semibold">
-                            900 films
-                        </span>
-                        <span class="bg-purple-400/20 text-purple-400 px-2 py-1 rounded-full text-xs font-semibold">
-                            500 séries
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
-                        Magie, créatures et mondes imaginaires
-                    </p>
-                </div>
-                <div class="absolute inset-0 border-2 border-transparent group-hover:border-purple-400/50 rounded-2xl transition-all duration-500 z-30"></div>
-            </div>
+            <?php endforeach; ?>
         </div>
 
         <!-- Navigation entre les genres -->
         <div class="flex justify-center mt-12 fade-in">
-            <button class="px-8 py-3 glass hover:bg-gray-700/30 rounded-xl transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1">
+            <a href="pages/films.php?genre=all" class="px-8 py-3 glass hover:bg-gray-700/30 rounded-xl transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1 group" id="explore-all-btn">
                 <i class="fas fa-compass text-orange-500"></i>
                 <span>Explorer tous les genres</span>
                 <i class="fas fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
-            </button>
+            </a>
         </div>
     </div>
 </section>
@@ -302,12 +96,19 @@
     opacity: 0;
     transform: scale(0.8);
 }
+
+/* Masquer les comptes selon le filtre */
+.genre-card.filter-movies .series-count,
+.genre-card.filter-series .movies-count {
+    opacity: 0.3;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const filterButtons = document.querySelectorAll('.filter-btn');
     const genreCards = document.querySelectorAll('.genre-card');
+    const exploreAllBtn = document.getElementById('explore-all-btn');
     
     filterButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -318,14 +119,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const filter = this.getAttribute('data-filter');
             
+            // Mettre à jour le bouton "Explorer tous les genres"
+            updateExploreAllButton(filter);
+            
             // Filtrer les cartes
             genreCards.forEach(card => {
                 if (filter === 'all') {
                     card.classList.remove('hidden');
+                    card.classList.remove('filter-movies', 'filter-series');
                 } else {
                     const categories = card.getAttribute('data-category');
                     if (categories.includes(filter)) {
                         card.classList.remove('hidden');
+                        card.classList.add('filter-' + filter);
                     } else {
                         card.classList.add('hidden');
                     }
@@ -333,5 +139,43 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+    
+    function updateExploreAllButton(filter) {
+        let href = 'pages/films.php?genre=all';
+        let text = 'Explorer tous les genres';
+        
+        if (filter === 'series') {
+            href = 'pages/series.php?genre=all';
+            text = 'Explorer toutes les séries';
+        } else if (filter === 'movies') {
+            text = 'Explorer tous les films';
+        }
+        
+        exploreAllBtn.href = href;
+        exploreAllBtn.querySelector('span').textContent = text;
+    }
 });
+
+function navigateToGenre(genreId, genreName) {
+    // Déterminer la page cible en fonction du filtre actif
+    const activeFilter = document.querySelector('.filter-btn.active');
+    let targetPage = 'pages/films.php';
+    
+    if (activeFilter) {
+        const filterType = activeFilter.getAttribute('data-filter');
+        if (filterType === 'series') {
+            targetPage = 'pages/series.php';
+        }
+    }
+    
+    console.log('Navigation vers:', targetPage + '?genre=' + genreId);
+    window.location.href = targetPage + '?genre=' + genreId;
+}
+
+function formatCount(count) {
+    if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return count.toString();
+}
 </script>
