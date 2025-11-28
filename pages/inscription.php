@@ -203,7 +203,7 @@ function sendVerificationEmail($email, $username, $token) {
             
             <div class='footer'>
                 <p>Si vous n'avez pas créé de compte sur CineTrack, veuillez ignorer cet email.</p>
-                <p>© 2024 CineTrack. Tous droits réservés.</p>
+                <p>© 2026 CineTrack. Tous droits réservés.</p>
             </div>
         </div>
     </body>

@@ -168,11 +168,7 @@ $stmt->close();
     </div>
     
     <!-- Footer -->
-    <footer class="bg-gray-900/50 border-t border-gray-800 py-8">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <p class="text-gray-400">&copy; 2024 CineTrack. Tous droits réservés.</p>
-        </div>
-    </footer>
+     <?php include '../../includes/footer.php'; ?>
     
     <script>
     function openModal() {
