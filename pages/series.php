@@ -1,12 +1,13 @@
 <?php
-include '../includes/config.conf.php'; // CORRECTION: .conf → .php
+// series.php - TMDb API Integration for TV Shows
+include '../includes/config.conf.php';
 
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
 $year_filter = isset($_GET['year']) ? $_GET['year'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Function to fetch TV shows from TMDb API - CORRIGÉE
+// Function to fetch TV shows from TMDb API
 function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     $api_key = TMDB_API_KEY;
     $base_url = TMDB_BASE_URL;
@@ -33,7 +34,6 @@ function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_USERAGENT => 'CineTrack/1.0'
-        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -53,7 +53,7 @@ function fetchTVShowsFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     return ['tv_shows' => [], 'total_pages' => 1, 'total_results' => 0];
 }
 
-// Function to get TV genre list from TMDb - CORRIGÉE
+// Function to get TV genre list from TMDb
 function fetchTVGenresFromAPI() {
     $api_key = TMDB_API_KEY;
     $url = TMDB_BASE_URL . 'genre/tv/list?api_key=' . $api_key . '&language=fr-FR';
@@ -64,7 +64,6 @@ function fetchTVGenresFromAPI() {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false
-        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -593,17 +592,17 @@ $total_series = count($series);
                 <?php else: ?>
                     <div class="series-grid">
                         <?php foreach($series as $serie): ?>
-                            <div class="serie-card">
+                            <div class="serie-card" onclick="viewSerieDetails(<?php echo $serie['id_serie']; ?>)">
                                 <div class="serie-poster">
                                     <img src="<?php echo $serie['poster']; ?>" 
                                          alt="<?php echo htmlspecialchars($serie['titre']); ?>"
                                          loading="lazy">
                                     <div class="serie-overlay">
                                         <div class="flex justify-between">
-                                            <button class="favorite-btn">
+                                            <button class="favorite-btn" onclick="event.stopPropagation(); addToWatchlist(<?php echo $serie['id_serie']; ?>, '<?php echo addslashes($serie['titre']); ?>', '<?php echo $serie['poster']; ?>', 'series')">
                                                 <i class="far fa-heart"></i>
                                             </button>
-                                            <button class="play-btn" onclick="viewSerie(<?php echo $serie['id_serie']; ?>)">
+                                            <button class="play-btn" onclick="event.stopPropagation(); viewSerieDetails(<?php echo $serie['id_serie']; ?>)">
                                                 <i class="fas fa-play"></i>
                                             </button>
                                         </div>
@@ -657,12 +656,39 @@ $total_series = count($series);
         </section>
     </main>
     
-    <?php include '../includes/footer.php'; ?> <!-- CORRECTION: includes/footer.php -->
+    <?php include '../includes/footer.php'; ?>
     
     <script>
-    function viewSerie(serieId) {
-        // Redirect to serie details page or show modal
+    function viewSerieDetails(serieId) {
         window.location.href = 'serie-details.php?id=' + serieId;
+    }
+    
+    function addToWatchlist(serieId, serieTitle, seriePoster) {
+        const data = {
+            serie_id: serieId,
+            serie_title: serieTitle,
+            serie_poster: seriePoster
+        };
+
+        fetch('add-to-watchlist.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Série ajoutée à votre watchlist!');
+            } else {
+                alert('Erreur: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Une erreur est survenue');
+        });
     }
     
     // Auto-submit form when filters change
