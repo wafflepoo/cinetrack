@@ -18,7 +18,56 @@
     opacity: 1;
     transform: translateY(0);
 }
+/* Animations pour la recherche */
+.stats-section {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
 
+.stats-section.search-active {
+    transform: translateY(120px);
+    opacity: 0.7;
+}
+
+.quick-actions {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
+
+.quick-actions.search-active {
+    transform: translateY(80px);
+    opacity: 0.8;
+}
+
+.search-results-container {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ajustement du conteneur de recherche */
+.max-w-4xl.mx-auto {
+    transition: margin-bottom 0.5s ease;
+}
+
+.max-w-4xl.mx-auto.search-active {
+    margin-bottom: 200px;
+}
+
+/* Assurez-vous que le contenu a assez d'espace */
+.hero-with-background {
+    min-height: 100vh;
+    padding-bottom: 100px;
+}
 .slide-in-left {
     opacity: 0;
     transform: translateX(-50px);

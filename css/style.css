@@ -54,7 +54,6 @@
     box-shadow: 0 0 25px rgba(255, 140, 0, 0.4);
 }
 
-/* Hero background image avec overlay */
 .hero-with-background {
     position: relative;
     background: 
@@ -66,7 +65,10 @@
     min-height: 100vh;
     display: flex;
     align-items: center;
+    padding: 0;          /* empêcher le zoom */
+    overflow: hidden;    /* empêcher déplacement du fond */
 }
+
 
 /* Effet de vignette pour mieux faire ressortir le texte */
 .hero-vignette::after {
@@ -187,6 +189,49 @@
     background: #ff6b00;
 }
 
+/* Animations pour la recherche */
+.stats-section {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
+
+#stats-section.search-active {
+    transform: translateY(120px);
+}
+
+
+.quick-actions {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
+
+.quick-actions.search-active {
+    transform: translateY(80px);
+    opacity: 0.8;
+}
+
+.search-results-container {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ajustement du conteneur de recherche */
+.max-w-4xl.mx-auto {
+    transition: margin-bottom 0.5s ease;
+}
+
+
+
 /* Loading animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
@@ -205,6 +250,35 @@
 .hover-lift:hover {
     transform: translateY(-8px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Styles pour les cartes en verre */
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card-hover {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Assurez-vous que ces classes existent */
+.glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f97316, #eab308);
+    color: white;
+    border: none;
 }
 
 /* Text gradient */
@@ -249,4 +323,9 @@ button:focus, input:focus, select:focus, textarea:focus {
 /* Smooth transitions */
 * {
     transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#search-results {
+    position: relative !important;
+    margin-top: 20px;
 }
