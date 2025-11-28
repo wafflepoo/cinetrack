@@ -105,7 +105,7 @@ if (!empty($api_trending_tv)) {
                 <h2 class="text-4xl font-bold">
                     <span class="text-orange-500">Films</span> Tendances
                 </h2>
-                <a href="films.php" class="text-orange-500 hover:text-orange-400 transition-all duration-300 font-semibold group">
+                <a href="/pages/films.php" class="text-orange-500 hover:text-orange-400 transition-all duration-300 font-semibold group">
                     Voir tout <i class="fas fa-arrow-right ml-1 transform group-hover:translate-x-1 transition-transform"></i>
                 </a>
             </div>
@@ -165,7 +165,7 @@ if (!empty($api_trending_tv)) {
                 <h2 class="text-4xl font-bold">
                     <span class="text-purple-500">Séries</span> Tendances
                 </h2>
-                <a href="series.php" class="text-purple-500 hover:text-purple-400 transition-all duration-300 font-semibold group">
+                <a href="/pages/series.php" class="text-purple-500 hover:text-purple-400 transition-all duration-300 font-semibold group">
                     Voir tout <i class="fas fa-arrow-right ml-1 transform group-hover:translate-x-1 transition-transform"></i>
                 </a>
             </div>
