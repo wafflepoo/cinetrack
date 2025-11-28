@@ -11,10 +11,7 @@
         <!-- Filtres de catégorie -->
         <div class="flex justify-center mb-12 fade-in">
             <div class="glass rounded-2xl p-2 flex space-x-2">
-                <button class="filter-btn active px-6 py-3 rounded-xl transition-all duration-300 flex items-center space-x-2" data-filter="all">
-                    <i class="fas fa-layer-group text-orange-500"></i>
-                    <span>Tous les genres</span>
-                </button>
+                
                 <button class="filter-btn px-6 py-3 rounded-xl transition-all duration-300 flex items-center space-x-2" data-filter="movies">
                     <i class="fas fa-film text-orange-500"></i>
                     <span>Films</span>
@@ -28,8 +25,15 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-animation genres-container">
             <?php foreach($genres_with_counts as $genre): ?>
+            <?php 
+                // Déterminer les catégories disponibles pour ce genre
+                $categories = [];
+                if ($genre['has_movies']) $categories[] = 'movies';
+                if ($genre['has_series']) $categories[] = 'series';
+                $category_string = implode(' ', $categories);
+            ?>
             <div class="genre-card group relative h-80 rounded-2xl overflow-hidden cursor-pointer transform transition-all duration-700 hover:scale-105" 
-                 data-category="movies series"
+                 data-category="<?php echo $category_string; ?>"
                  onclick="navigateToGenre('<?php echo $genre['id']; ?>', '<?php echo urlencode($genre['name']); ?>')">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10"></div>
                 <img 
@@ -46,12 +50,16 @@
                     </div>
                     <h3 class="text-2xl font-bold text-white mb-4"><?php echo htmlspecialchars($genre['name']); ?></h3>
                     <div class="flex space-x-2 mb-2 transform translate-y-2">
+                        <?php if($genre['has_movies']): ?>
                         <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold movies-count">
                             <?php echo formatCount($genre['movie_count']); ?> films
                         </span>
+                        <?php endif; ?>
+                        <?php if($genre['has_series']): ?>
                         <span class="bg-orange-500/20 text-orange-500 px-2 py-1 rounded-full text-xs font-semibold series-count">
                             <?php echo formatCount($genre['series_count']); ?> séries
                         </span>
+                        <?php endif; ?>
                     </div>
                     <p class="text-gray-300 text-sm opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-200">
                         Découvrez notre collection <?php echo htmlspecialchars($genre['name']); ?>
@@ -64,11 +72,11 @@
 
         <!-- Navigation entre les genres -->
         <div class="flex justify-center mt-12 fade-in">
-            <a href="pages/films.php?genre=all" class="px-8 py-3 glass hover:bg-gray-700/30 rounded-xl transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1 group" id="explore-all-btn">
+            <button onclick="exploreAllGenres()" class="px-8 py-3 glass hover:bg-gray-700/30 rounded-xl transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1 group" id="explore-all-btn">
                 <i class="fas fa-compass text-orange-500"></i>
                 <span>Explorer tous les genres</span>
                 <i class="fas fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
-            </a>
+            </button>
         </div>
     </div>
 </section>
@@ -141,17 +149,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function updateExploreAllButton(filter) {
-        let href = 'pages/films.php?genre=all';
         let text = 'Explorer tous les genres';
         
         if (filter === 'series') {
-            href = 'pages/series.php?genre=all';
             text = 'Explorer toutes les séries';
         } else if (filter === 'movies') {
             text = 'Explorer tous les films';
         }
         
-        exploreAllBtn.href = href;
         exploreAllBtn.querySelector('span').textContent = text;
     }
 });
@@ -170,6 +175,25 @@ function navigateToGenre(genreId, genreName) {
     
     console.log('Navigation vers:', targetPage + '?genre=' + genreId);
     window.location.href = targetPage + '?genre=' + genreId;
+}
+
+function exploreAllGenres() {
+    // Déterminer la page cible en fonction du filtre actif
+    const activeFilter = document.querySelector('.filter-btn.active');
+    
+    if (activeFilter) {
+        const filterType = activeFilter.getAttribute('data-filter');
+        if (filterType === 'series') {
+            window.location.href = 'pages/series.php';
+        } else if (filterType === 'movies') {
+            window.location.href = 'pages/films.php';
+        } else {
+            // Pour "Tous les genres", ouvrir les deux dans des onglets ou choisir films par défaut
+            window.location.href = 'pages/films.php';
+        }
+    } else {
+        window.location.href = 'pages/films.php';
+    }
 }
 
 function formatCount(count) {
