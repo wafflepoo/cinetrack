@@ -270,6 +270,118 @@ $stmt->close();
                     <p class="text-gray-400 text-sm mt-2">Créer et organiser</p>
                 </a>
             </div>
+            <!-- ... Après la section Quick Actions dans dashboard.php ... -->
+
+<!-- Section Recommandations -->
+<div class="mt-12">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-3xl font-bold">🎬 Recommandations personnalisées</h2>
+        <a href="recommendations.php" class="btn-primary px-6 py-3 rounded-lg font-semibold flex items-center">
+            <i class="fas fa-magic mr-2"></i>Voir toutes les recommandations
+        </a>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Carte basée sur les genres -->
+        <div class="glass p-6 rounded-2xl border-l-4 border-orange-500">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-tags text-orange-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold">Basé sur vos genres</h3>
+                    <p class="text-gray-400">Films similaires à votre watchlist</p>
+                </div>
+            </div>
+            <a href="recommendations.php?type=genres" class="text-orange-500 hover:text-orange-400 font-semibold inline-flex items-center">
+                Découvrir <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+        
+        <!-- Carte basée sur les acteurs -->
+        <div class="glass p-6 rounded-2xl border-l-4 border-purple-500">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-users text-purple-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold">Avec vos acteurs favoris</h3>
+                    <p class="text-gray-400">Films avec les acteurs que vous aimez</p>
+                </div>
+            </div>
+            <a href="recommendations.php?type=actors" class="text-purple-500 hover:text-purple-400 font-semibold inline-flex items-center">
+                Explorer <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Preview rapide des recommandations -->
+    <div class="glass rounded-2xl p-6">
+        <h3 class="text-xl font-bold mb-4">🎭 Nos suggestions du moment</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <?php
+            // Afficher quelques films populaires comme preview
+            $preview_movies = getPopularPreview();
+            foreach ($preview_movies as $movie): 
+            ?>
+            <div class="cursor-pointer group" onclick="viewMovieDetails(<?= $movie['id'] ?>)">
+                <div class="aspect-[2/3] rounded-lg overflow-hidden mb-2">
+                    <img src="<?= $movie['poster'] ?>" 
+                         alt="<?= htmlspecialchars($movie['title']) ?>"
+                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                </div>
+                <p class="text-sm font-medium truncate" title="<?= htmlspecialchars($movie['title']) ?>">
+                    <?= htmlspecialchars($movie['title']) ?>
+                </p>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<?php
+// Fonction pour obtenir quelques films populaires (prévisualisation)
+function getPopularPreview() {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . "movie/popular?api_key=$api_key&language=fr-FR&page=1";
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => false
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $movies = [];
+    
+    if ($response) {
+        $data = json_decode($response, true);
+        if (isset($data['results'])) {
+            // Prendre 6 films maximum
+            $count = 0;
+            foreach ($data['results'] as $movie) {
+                if ($count >= 6) break;
+                
+                if (!empty($movie['poster_path'])) {
+                    $movies[] = [
+                        'id' => $movie['id'],
+                        'title' => $movie['title'] ?? 'Titre inconnu',
+                        'poster' => TMDB_IMAGE_BASE_URL . 'w500' . $movie['poster_path'],
+                        'release_date' => $movie['release_date'] ?? ''
+                    ];
+                    $count++;
+                }
+            }
+        }
+    }
+    
+    return $movies;
+}
+?>
         </div>
     </main>
     
