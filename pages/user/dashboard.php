@@ -272,6 +272,10 @@ $stmt->close();
             </div>
             <!-- ... Après la section Quick Actions dans dashboard.php ... -->
 
+<!-- Dans dashboard.php, modifiez les liens pour pointer vers pages/recommendations.php -->
+
+<!-- Ajoutez cette section après la section "Quick Actions" -->
+
 <!-- Section Recommandations -->
 <div class="mt-12">
     <div class="flex items-center justify-between mb-6">
@@ -321,6 +325,46 @@ $stmt->close();
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <?php
             // Afficher quelques films populaires comme preview
+            function getPopularPreview() {
+                $api_key = TMDB_API_KEY;
+                $url = TMDB_BASE_URL . "movie/popular?api_key=$api_key&language=fr-FR&page=1";
+                
+                $ch = curl_init();
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 5,
+                    CURLOPT_SSL_VERIFYPEER => false
+                ]);
+                
+                $response = curl_exec($ch);
+                curl_close($ch);
+                
+                $movies = [];
+                
+                if ($response) {
+                    $data = json_decode($response, true);
+                    if (isset($data['results'])) {
+                        $count = 0;
+                        foreach ($data['results'] as $movie) {
+                            if ($count >= 6) break;
+                            
+                            if (!empty($movie['poster_path'])) {
+                                $movies[] = [
+                                    'id' => $movie['id'],
+                                    'title' => $movie['title'] ?? 'Titre inconnu',
+                                    'poster' => TMDB_IMAGE_BASE_URL . 'w500' . $movie['poster_path'],
+                                    'release_date' => $movie['release_date'] ?? ''
+                                ];
+                                $count++;
+                            }
+                        }
+                    }
+                }
+                
+                return $movies;
+            }
+            
             $preview_movies = getPopularPreview();
             foreach ($preview_movies as $movie): 
             ?>
@@ -339,50 +383,13 @@ $stmt->close();
     </div>
 </div>
 
-<?php
-// Fonction pour obtenir quelques films populaires (prévisualisation)
-function getPopularPreview() {
-    $api_key = TMDB_API_KEY;
-    $url = TMDB_BASE_URL . "movie/popular?api_key=$api_key&language=fr-FR&page=1";
-    
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_SSL_VERIFYPEER => false
-    ]);
-    
-    $response = curl_exec($ch);
-    curl_close($ch);
-    
-    $movies = [];
-    
-    if ($response) {
-        $data = json_decode($response, true);
-        if (isset($data['results'])) {
-            // Prendre 6 films maximum
-            $count = 0;
-            foreach ($data['results'] as $movie) {
-                if ($count >= 6) break;
-                
-                if (!empty($movie['poster_path'])) {
-                    $movies[] = [
-                        'id' => $movie['id'],
-                        'title' => $movie['title'] ?? 'Titre inconnu',
-                        'poster' => TMDB_IMAGE_BASE_URL . 'w500' . $movie['poster_path'],
-                        'release_date' => $movie['release_date'] ?? ''
-                    ];
-                    $count++;
-                }
-            }
-        }
-    }
-    
-    return $movies;
+<script>
+function viewMovieDetails(movieId) {
+    window.location.href = 'movie-details.php?id=' + movieId;
 }
-?>
-        </div>
+</script>
+
+   </div>
     </main>
     
     <!-- Footer -->
