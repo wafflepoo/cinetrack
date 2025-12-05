@@ -6,7 +6,7 @@ require_once '../../includes/auth.php';
 
 if (!isLoggedIn()) {
     $_SESSION['error'] = 'Non connecté';
-    header('Location: liste.php'); // redirection vers la page des listes
+    header('Location: lists.php'); // redirection vers la page des listes
     exit();
 }
 
@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$list_name || !$list_type) {
         $_SESSION['error'] = 'Données invalides';
-        header('Location: liste.php');
+        header('Location: lists.php');
         exit();
     }
 
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result->num_rows > 0) {
             $_SESSION['error'] = 'Une liste avec ce nom existe déjà';
-            header('Location: liste.php');
+            header('Location: lists.php');
             exit();
         }
         $stmt->close();
@@ -42,18 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("ssi", $list_name, $list_type, $user_id);
 
         if ($stmt->execute()) {
+    $new_list_id = $stmt->insert_id;
+    header('Location: add-items.php?id=' . $new_list_id);
+    exit();
+}
+
+        if ($stmt->execute()) {
             $_SESSION['success'] = 'Liste créée avec succès';
         } else {
             $_SESSION['error'] = 'Erreur base de données: ' . $stmt->error;
         }
         $stmt->close();
 
-        header('Location: liste.php');
+        header('Location: lists.php');
         exit();
 
     } catch (Exception $e) {
         $_SESSION['error'] = 'Erreur: ' . $e->getMessage();
-        header('Location: liste.php');
+        header('Location: lists.php');
         exit();
     }
 } else {
@@ -61,4 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Location: lists.php');
     exit();
 }
+
+
+
 ?>
