@@ -65,6 +65,18 @@ $stmt->close();
                     <h1 class="text-4xl font-black mb-2">Mes Listes</h1>
                     <p class="text-gray-400 text-lg">Organisez vos films et séries en listes personnalisées</p>
                 </div>
+                <?php if(!empty($_SESSION['success'])): ?>
+    <div class="max-w-7xl mx-auto px-6 mb-4 p-4 bg-green-600 text-white rounded-lg">
+        <?php echo $_SESSION['success']; unset($_SESSION['success']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if(!empty($_SESSION['error'])): ?>
+    <div class="max-w-7xl mx-auto px-6 mb-4 p-4 bg-red-600 text-white rounded-lg">
+        <?php echo $_SESSION['error']; unset($_SESSION['error']); ?>
+    </div>
+<?php endif; ?>
+
                 
                 <!-- Create List Button -->
                 <button onclick="openModal()" class="btn-primary px-6 py-3 rounded-lg font-semibold mt-4 md:mt-0">
