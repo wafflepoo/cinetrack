@@ -405,6 +405,61 @@ $features = [
     <?php include 'includes/trending.php'; ?>
     <?php include 'includes/genres.php'; ?>
     <?php include 'includes/features.php'; ?>
+    <section class="py-16 px-4">
+    <div class="max-w-7xl mx-auto">
+        <div class="glass p-8 md:p-12 rounded-3xl border border-gray-700 shadow-2xl">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                        🎯 Testez vos connaissances cinéma
+                    </h2>
+                    <p class="text-gray-300 mb-6">
+                        Notre quiz quotidien vous propose 10 questions sur les films, 
+                        les acteurs et les réalisateurs. Défiez-vous et comparez votre 
+                        score avec la communauté !
+                    </p>
+                    <div class="space-y-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-stopwatch text-orange-500"></i>
+                            <span>10 minutes chrono</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-question text-orange-500"></i>
+                            <span>10 questions de difficulté variable</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-trophy text-orange-500"></i>
+                            <span>Classement des meilleurs scores</span>
+                        </div>
+                    </div>
+                    <a href="pages/quiz.php" 
+                       class="btn-primary px-8 py-4 rounded-xl text-lg font-bold inline-flex items-center gap-3 hover:scale-105 transition-transform">
+                        <i class="fas fa-play"></i>
+                        Commencer le quiz du jour
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-gradient-to-r from-orange-500 to-purple-600 rounded-2xl blur-xl opacity-30"></div>
+                        <div class="relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
+                            <div class="text-center">
+                                <div class="text-5xl mb-4">🎬</div>
+                                <h3 class="text-2xl font-bold mb-2">Quiz du Jour</h3>
+                                <p class="text-gray-400 mb-4">Thème : Films des années 2000</p>
+                                <div class="flex justify-center gap-4 mb-6">
+                                    <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">Action</span>
+                                    <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">Comédie</span>
+                                    <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">Drame</span>
+                                </div>
+                                <p class="text-sm text-gray-500">Moyenne des joueurs : 6.5/10</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
     <?php include 'includes/cta.php'; ?>
     <?php include 'includes/footer.php'; ?>
 
