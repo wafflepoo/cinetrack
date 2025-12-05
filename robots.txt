@@ -1,0 +1,11 @@
+# Bloquer les dossiers sensibles
+User-agent: *
+Disallow: /admin/
+Disallow: /config.conf.php
+Disallow: /config.conf
+
+# Autoriser tout le reste
+Allow: /
+
+# Sitemap
+Sitemap: https://cinetrack.alwaysdata.net/sitemap.xml

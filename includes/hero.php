@@ -10,19 +10,22 @@
 
     <div class="max-w-7xl mx-auto relative z-10">
 
+   
         <!-- TITRE -->
-        <div class="text-center mb-12 fade-in">
-            <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight hero-title">
-                Découvrez votre<br/>
-                <span class="gradient-text">
-                    Prochaine Obsession
-                </span>
-            </h1>
-            <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-                Films, séries, critiques et recommandations personnalisées par IA. 
-                Rejoignez la communauté des cinéphiles passionnés.
-            </p>
-        </div>
+<div class="text-center mb-12 fade-in">
+    <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight hero-title">
+        Découvrez vos<br/>
+        <span class="gradient-text">
+            films et séries préférés
+        </span>
+    </h1>
+    <p class="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
+        CineTrack vous permet de suivre vos films et séries, créer votre watchlist, 
+        regarder les bandes-annonces et partager vos avis et critiques. 
+        Recevez des recommandations personnalisées et rejoignez la communauté de cinéphiles passionnés.
+    </p>
+</div>
+
 
         <!-- BARRE DE RECHERCHE -->
         <div class="max-w-4xl mx-auto mb-8 fade-in search-wrapper" style="transition-delay: 0.2s;">
