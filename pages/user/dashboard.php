@@ -434,7 +434,9 @@ $recommendations_preview = getDashboardRecommendationsPreview($user['id']);
                             <h3 class="text-xl font-bold mb-2">Basé sur votre watchlist</h3>
                             <p class="text-gray-400">
                                 Nous avons analysé vos films préférés pour vous suggérer des contenus similaires.
-                               
+                                <?php if ($total_watchlist > 0): ?>
+                                    <span class="text-green-500 font-semibold"> (<?= $total_watchlist ?> film(s) analysé(s))</span>
+                                <?php endif; ?>
                             </p>
                         </div>
                     </div>
