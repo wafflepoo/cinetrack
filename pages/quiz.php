@@ -3,10 +3,20 @@
 session_start();
 include '../includes/config.conf.php';
 
-// Définir la catégorie films dans Open Trivia Database
-// Catégorie 11 = Films
-$category_id = 11;
-$amount = 10; // Nombre de questions
+// DEUX CATÉGORIES SEULEMENT
+$categories = [
+    11 => ['name' => 'Films', 'icon' => '🎬', 'color' => '#FFC107'],
+    14 => ['name' => 'Séries TV', 'icon' => '📺', 'color' => '#9C27B0']
+];
+
+// Catégorie par défaut = Films
+$selected_category = isset($_GET['cat']) && isset($categories[$_GET['cat']]) 
+    ? (int)$_GET['cat'] 
+    : 11; // Films par défaut
+
+$current_category = $categories[$selected_category];
+$category_id = $selected_category;
+$amount = 10;
 $difficulty = 'medium';
 
 // Récupérer les questions depuis l'API Open Trivia
@@ -34,31 +44,54 @@ function fetchQuizQuestions($amount = 10, $category = 11, $difficulty = 'medium'
     }
     
     error_log("Quiz API Error: HTTP $http_code");
-    return getFallbackQuestions(); // Questions de secours
+    return getFallbackQuestions($category);
 }
 
-// Questions de secours si l'API échoue
-function getFallbackQuestions() {
-    return [
-        [
-            'question' => 'Dans%20quel%20film%20entend-on%20la%20citation%20%22I%26%2339%3Bll%20be%20back%22%3F',
-            'correct_answer' => 'Terminator',
-            'incorrect_answers' => ['Matrix', 'Alien', 'RoboCop'],
-            'type' => 'multiple'
-        ],
-        [
-            'question' => 'Qui%20a%20r%C3%A9alis%C3%A9%20le%20film%20%22Inception%22%3F',
-            'correct_answer' => 'Christopher%20Nolan',
-            'incorrect_answers' => ['Steven%20Spielberg', 'James%20Cameron', 'Quentin%20Tarantino'],
-            'type' => 'multiple'
-        ],
-        [
-            'question' => 'Quel%20acteur%20joue%20le%20r%C3%B4le%20principal%20dans%20%22Forrest%20Gump%22%3F',
-            'correct_answer' => 'Tom%20Hanks',
-            'incorrect_answers' => ['Brad%20Pitt', 'Johnny%20Depp', 'Leonardo%20DiCaprio'],
-            'type' => 'multiple'
-        ]
-    ];
+// Questions de secours adaptées à la catégorie
+function getFallbackQuestions($category = 11) {
+    if ($category == 14) { // Séries TV
+        return [
+            [
+                'question' => 'Dans%20quelle%20s%C3%A9rie%20trouve-t-on%20les%20personnages%20de%20Walter%20White%20et%20Jesse%20Pinkman%3F',
+                'correct_answer' => 'Breaking%20Bad',
+                'incorrect_answers' => ['The%20Wire', 'Narcos', 'Better%20Call%20Saul'],
+                'type' => 'multiple'
+            ],
+            [
+                'question' => 'Combien%20y%20a-t-il%20de%20saisons%20de%20Friends%3F',
+                'correct_answer' => '10',
+                'incorrect_answers' => ['8', '9', '11'],
+                'type' => 'multiple'
+            ],
+            [
+                'question' => 'Quel%20est%20le%20nom%20de%20la%20maison%20dans%20Game%20of%20Thrones%20dont%20la%20devise%20est%20%22Winter%20is%20Coming%22%3F',
+                'correct_answer' => 'Stark',
+                'incorrect_answers' => ['Lannister', 'Targaryen', 'Baratheon'],
+                'type' => 'multiple'
+            ]
+        ];
+    } else { // Films
+        return [
+            [
+                'question' => 'Dans%20quel%20film%20entend-on%20la%20citation%20%22I%26%2339%3Bll%20be%20back%22%3F',
+                'correct_answer' => 'Terminator',
+                'incorrect_answers' => ['Matrix', 'Alien', 'RoboCop'],
+                'type' => 'multiple'
+            ],
+            [
+                'question' => 'Qui%20a%20r%C3%A9alis%C3%A9%20le%20film%20%22Inception%22%3F',
+                'correct_answer' => 'Christopher%20Nolan',
+                'incorrect_answers' => ['Steven%20Spielberg', 'James%20Cameron', 'Quentin%20Tarantino'],
+                'type' => 'multiple'
+            ],
+            [
+                'question' => 'Quel%20acteur%20joue%20le%20r%C3%B4le%20principal%20dans%20%22Forrest%20Gump%22%3F',
+                'correct_answer' => 'Tom%20Hanks',
+                'incorrect_answers' => ['Brad%20Pitt', 'Johnny%20Depp', 'Leonardo%20DiCaprio'],
+                'type' => 'multiple'
+            ]
+        ];
+    }
 }
 
 // Récupérer les questions
@@ -97,10 +130,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_quiz'])) {
         
         try {
             $stmt = $mysqli->prepare("
-                INSERT INTO quiz_scores (user_id, score, total_questions, percentage, answers_data, quiz_date) 
-                VALUES (?, ?, ?, ?, ?, NOW())
+                INSERT INTO quiz_scores (user_id, score, total_questions, percentage, answers_data, quiz_date, category_id) 
+                VALUES (?, ?, ?, ?, ?, NOW(), ?)
             ");
-            $stmt->bind_param("iiids", $user_id, $score, $total_questions, $percentage, $score_data);
+            $stmt->bind_param("iiidsi", $user_id, $score, $total_questions, $percentage, $score_data, $category_id);
             
             if ($stmt->execute()) {
                 error_log("Quiz score saved for user $user_id: $score/$total_questions ($percentage%)");
@@ -113,24 +146,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_quiz'])) {
             error_log("Error saving quiz score: " . $e->getMessage());
         }
     }
-    // ************ FIN DU CODE À AJOUTER ************
-
 }
 
 // Calculer le pourcentage
 $percentage = count($questions) > 0 ? round(($score / count($questions)) * 100) : 0;
 
-// Déterminer un message selon le score
-$messages = [
-    90 => "🎬 Expert cinéma ! Vous êtes incroyable !",
-    70 => "👏 Très bon score ! Vaste culture cinématographique !",
-    50 => "👍 Pas mal ! Vous connaissez bien vos classiques.",
-    30 => "🤔 Quelques révisions nécessaires, mais bon essai !",
-    0 => "😅 Il est temps de regarder plus de films !"
+// Messages personnalisés par catégorie
+$category_messages = [
+    11 => [ // Films
+        90 => "🎬 Expert cinéma ! Vous êtes incroyable !",
+        70 => "👏 Très bon score ! Vaste culture cinématographique !",
+        50 => "👍 Pas mal ! Vous connaissez bien vos classiques.",
+        30 => "🤔 Quelques révisions nécessaires, mais bon essai !",
+        0 => "😅 Il est temps de regarder plus de films !"
+    ],
+    14 => [ // Séries TV
+        90 => "📺 Expert séries ! Vous êtes un vrai binge-watcher !",
+        70 => "👏 Excellent ! Vous connaissez vos séries sur le bout des doigts !",
+        50 => "👍 Pas mal ! Vous avez de bonnes connaissances en séries !",
+        30 => "🤔 Il est temps de rattraper quelques épisodes !",
+        0 => "😅 Peut-être devriez-vous commencer une nouvelle série !"
+    ]
 ];
 
-$final_message = "😅 Il est temps de regarder plus de films !";
-foreach ($messages as $threshold => $message) {
+// Utiliser le message spécifique à la catégorie
+$final_message = "😅 Il est temps de regarder plus de {$current_category['name']} !";
+$message_list = $category_messages[$category_id];
+
+foreach ($message_list as $threshold => $message) {
     if ($percentage >= $threshold) {
         $final_message = $message;
         break;
@@ -143,13 +186,13 @@ foreach ($messages as $threshold => $message) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Cinéma - CineTrack</title>
+    <title>Quiz <?php echo $current_category['name']; ?> - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <style>
         .quiz-hero {
-            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(233, 30, 99, 0.1) 100%);
+            background: linear-gradient(135deg, <?php echo $current_category['color']; ?>10 0%, rgba(233, 30, 99, 0.1) 100%);
             padding: 100px 0 50px;
         }
         
@@ -164,13 +207,13 @@ foreach ($messages as $threshold => $message) {
         }
         
         .question-card:hover {
-            border-color: rgba(255, 193, 7, 0.3);
-            box-shadow: 0 10px 30px rgba(255, 193, 7, 0.1);
+            border-color: <?php echo $current_category['color']; ?>30;
+            box-shadow: 0 10px 30px <?php echo $current_category['color']; ?>10;
         }
         
         .question-number {
             display: inline-block;
-            background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+            background: linear-gradient(135deg, <?php echo $current_category['color']; ?> 0%, <?php echo $current_category['color']; ?>CC 100%);
             color: #000;
             font-weight: bold;
             padding: 5px 15px;
@@ -190,13 +233,13 @@ foreach ($messages as $threshold => $message) {
         }
         
         .option-label:hover {
-            background: rgba(255, 193, 7, 0.1);
-            border-color: rgba(255, 193, 7, 0.3);
+            background: <?php echo $current_category['color']; ?>10;
+            border-color: <?php echo $current_category['color']; ?>30;
             transform: translateX(5px);
         }
         
         .option-label input[type="radio"]:checked + span {
-            color: #FFC107;
+            color: <?php echo $current_category['color']; ?>;
             font-weight: bold;
         }
         
@@ -236,7 +279,7 @@ foreach ($messages as $threshold => $message) {
             z-index: 1;
             font-size: 3rem;
             font-weight: bold;
-            color: #FFC107;
+            color: <?php echo $current_category['color']; ?>;
         }
         
         .share-buttons {
@@ -277,8 +320,8 @@ foreach ($messages as $threshold => $message) {
             position: fixed;
             top: 100px;
             right: 20px;
-            background: rgba(255, 193, 7, 0.2);
-            border: 2px solid #FFC107;
+            background: <?php echo $current_category['color']; ?>20;
+            border: 2px solid <?php echo $current_category['color']; ?>;
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -288,6 +331,21 @@ foreach ($messages as $threshold => $message) {
             font-size: 1.5rem;
             font-weight: bold;
             z-index: 100;
+        }
+        
+        .category-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .category-card.active {
+            border-color: <?php echo $current_category['color']; ?>;
+            box-shadow: 0 0 20px <?php echo $current_category['color']; ?>40;
         }
         
         @media (max-width: 768px) {
@@ -322,25 +380,40 @@ foreach ($messages as $threshold => $message) {
         <!-- Hero Section -->
         <section class="quiz-hero">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h1 class="text-4xl md:text-6xl font-black mb-6">
-                    🎬 Quiz Cinéma
+                <h1 class="text-4xl md:text-6xl font-black mb-2">
+                    <?php echo $current_category['icon']; ?> Quiz <?php echo $current_category['name']; ?>
                 </h1>
                 <p class="text-xl text-gray-300 mb-8">
-                    Testez vos connaissances cinématographiques avec <?php echo count($questions); ?> questions
+                    Testez vos connaissances avec <?php echo count($questions); ?> questions
                 </p>
                 
+                <!-- Sélecteur de catégorie (seulement avant le quiz) -->
                 <?php if(!$show_results): ?>
+                <div class="mb-10">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-300">Choisissez votre quiz :</h3>
+                    <div class="flex justify-center gap-6 max-w-xl mx-auto">
+                        <?php foreach($categories as $id => $cat): ?>
+                        <a href="quiz.php?cat=<?php echo $id; ?>" 
+                           class="category-card px-6 py-4 rounded-xl flex flex-col items-center gap-2 <?php echo $id == $category_id ? 'active' : 'bg-gray-800/50'; ?>"
+                           style="background: <?php echo $cat['color']; ?>20; border-color: <?php echo $cat['color']; ?>30; min-width: 140px;">
+                            <span class="text-3xl"><?php echo $cat['icon']; ?></span>
+                            <span class="font-bold text-lg"><?php echo $cat['name']; ?></span>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                
                 <div class="flex flex-col md:flex-row gap-4 justify-center items-center mb-8">
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-clock text-yellow-500"></i>
+                        <i class="fas fa-clock" style="color: <?php echo $current_category['color']; ?>"></i>
                         <span>10 minutes max</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-question-circle text-yellow-500"></i>
+                        <i class="fas fa-question-circle" style="color: <?php echo $current_category['color']; ?>"></i>
                         <span><?php echo count($questions); ?> questions</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <i class="fas fa-trophy text-yellow-500"></i>
+                        <i class="fas fa-trophy" style="color: <?php echo $current_category['color']; ?>"></i>
                         <span>Niveau <?php echo ucfirst($difficulty); ?></span>
                     </div>
                 </div>
@@ -372,11 +445,11 @@ foreach ($messages as $threshold => $message) {
                     </p>
                     
                     <div class="share-buttons">
-                        <a href="https://twitter.com/intent/tweet?text=J%27ai%20obtenu%20<?php echo $score; ?>%2F<?php echo count($questions); ?>%20au%20Quiz%20Cin%C3%A9ma%20sur%20%40CineTrack&url=<?php echo urlencode(SITE_URL . '/pages/quiz.php'); ?>"
+                        <a href="https://twitter.com/intent/tweet?text=J%27ai%20obtenu%20<?php echo $score; ?>%2F<?php echo count($questions); ?>%20au%20Quiz%20<?php echo urlencode($current_category['name']); ?>%20sur%20%40CineTrack&url=<?php echo urlencode(SITE_URL . '/pages/quiz.php?cat=' . $category_id); ?>"
                            target="_blank" class="share-btn share-twitter">
                             <i class="fab fa-twitter"></i> Partager sur Twitter
                         </a>
-                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode(SITE_URL . '/pages/quiz.php'); ?>"
+                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode(SITE_URL . '/pages/quiz.php?cat=' . $category_id); ?>"
                            target="_blank" class="share-btn share-facebook">
                             <i class="fab fa-facebook"></i> Partager sur Facebook
                         </a>
@@ -445,26 +518,40 @@ foreach ($messages as $threshold => $message) {
                 
                 <!-- Actions après le quiz -->
                 <div class="text-center space-y-6">
-                    <a href="quiz.php" class="btn-primary px-8 py-4 rounded-xl text-lg font-bold inline-block">
-                        <i class="fas fa-redo mr-2"></i> Nouveau quiz
-                    </a>
-                    <div class="text-gray-400">
-                        <p class="mb-2">Vous voulez en savoir plus sur ces films ?</p>
-                        <a href="films.php" class="text-yellow-500 hover:text-yellow-400 font-semibold">
-                            <i class="fas fa-film mr-2"></i> Découvrir plus de films
+                    <div class="flex flex-wrap justify-center gap-4 mb-6">
+                        <a href="quiz.php?cat=<?php echo $category_id; ?>" class="px-8 py-4 rounded-xl text-lg font-bold inline-block" style="background: <?php echo $current_category['color']; ?>;">
+                            <i class="fas fa-redo mr-2"></i> Nouveau quiz <?php echo $current_category['name']; ?>
                         </a>
+                        <a href="quiz.php" class="bg-gray-700 hover:bg-gray-600 px-8 py-4 rounded-xl text-lg font-bold inline-block">
+                            <i class="fas fa-random mr-2"></i> Changer de catégorie
+                        </a>
+                    </div>
+                    
+                    <div class="text-gray-400">
+                        <p class="mb-2">Vous voulez en savoir plus ?</p>
+                        <?php if($category_id == 11): ?>
+                            <a href="films.php" class="text-yellow-500 hover:text-yellow-400 font-semibold">
+                                <i class="fas fa-film mr-2"></i> Découvrir plus de films
+                            </a>
+                        <?php elseif($category_id == 14): ?>
+                            <a href="series.php" class="text-purple-500 hover:text-purple-400 font-semibold">
+                                <i class="fas fa-tv mr-2"></i> Découvrir plus de séries
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
                 <?php else: ?>
                 <!-- Formulaire du quiz -->
                 <form method="POST" action="" id="quizForm">
+                    <input type="hidden" name="category_id" value="<?php echo $category_id; ?>">
+                    
                     <?php if(empty($questions)): ?>
                         <div class="text-center py-12">
-                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                            <i class="fas fa-exclamation-triangle text-4xl mb-4" style="color: <?php echo $current_category['color']; ?>"></i>
                             <h3 class="text-2xl font-bold mb-2">Problème technique</h3>
                             <p class="text-gray-300 mb-6">Impossible de charger les questions pour le moment.</p>
-                            <a href="quiz.php" class="btn-primary px-6 py-3 rounded-xl">
+                            <a href="quiz.php?cat=<?php echo $category_id; ?>" class="px-6 py-3 rounded-xl font-semibold inline-block" style="background: <?php echo $current_category['color']; ?>;">
                                 <i class="fas fa-sync mr-2"></i> Réessayer
                             </a>
                         </div>
@@ -503,7 +590,8 @@ foreach ($messages as $threshold => $message) {
                         <div class="text-center mt-12">
                             <button type="submit" 
                                     name="submit_quiz" 
-                                    class="btn-primary px-10 py-4 rounded-xl text-lg font-bold hover:scale-105 transition-transform">
+                                    class="px-10 py-4 rounded-xl text-lg font-bold hover:scale-105 transition-transform"
+                                    style="background: <?php echo $current_category['color']; ?>;">
                                 <i class="fas fa-paper-plane mr-2"></i> Voir mon score
                             </button>
                             
@@ -549,8 +637,6 @@ foreach ($messages as $threshold => $message) {
     updateTimer();
     <?php endif; ?>
     
-    
-    
     // Animation des options
     document.querySelectorAll('.option-label').forEach(label => {
         label.addEventListener('click', function() {
@@ -562,8 +648,8 @@ foreach ($messages as $threshold => $message) {
             });
             
             // Mettre en surbrillance l'option sélectionnée
-            this.style.background = 'rgba(255, 193, 7, 0.15)';
-            this.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+            this.style.background = '<?php echo $current_category['color']; ?>15';
+            this.style.borderColor = '<?php echo $current_category['color']; ?>40';
         });
     });
     
