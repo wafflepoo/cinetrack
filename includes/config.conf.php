@@ -19,6 +19,7 @@ define('RECAPTCHA_SECRET_KEY', '6LcrXhMsAAAAAJt7LRbhPd1bDcAQc4CTZsK7tBmF');
 define('SITE_URL', 'https://cinetrack.alwaysdata.net');
 define('SECRET_KEY', 'cine-track-secret-key-2024');
 
+
 // MySQLi connection
 $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 

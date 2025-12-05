@@ -1,675 +1,946 @@
 <?php
-// pages/quiz.php
 session_start();
 include '../includes/config.conf.php';
 
-// DEUX CATÉGORIES SEULEMENT
-$categories = [
-    11 => ['name' => 'Films', 'icon' => '🎬', 'color' => '#FFC107'],
-    14 => ['name' => 'Séries TV', 'icon' => '📺', 'color' => '#9C27B0']
-];
+// Configuration pour le quiz
+define('QUIZ_QUESTIONS_COUNT', 10);
 
-// Catégorie par défaut = Films
-$selected_category = isset($_GET['cat']) && isset($categories[$_GET['cat']]) 
-    ? (int)$_GET['cat'] 
-    : 11; // Films par défaut
-
-$current_category = $categories[$selected_category];
-$category_id = $selected_category;
-$amount = 10;
-$difficulty = 'medium';
-
-// Récupérer les questions depuis l'API Open Trivia
-function fetchQuizQuestions($amount = 10, $category = 11, $difficulty = 'medium') {
-    $url = "https://opentdb.com/api.php?amount=$amount&category=$category&difficulty=$difficulty&type=multiple&encode=url3986";
-    
-    error_log("Fetching quiz from: $url");
+// Fonction pour récupérer des films populaires
+function fetchPopularMoviesForQuiz($count = 20) {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . 'movie/popular?api_key=' . $api_key . '&language=fr-FR&page=1';
     
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 10,
+        CURLOPT_TIMEOUT => 15,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_USERAGENT => 'CineTrack/1.0'
     ]);
     
     $response = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     
-    if ($http_code === 200 && $response) {
+    if ($response) {
         $data = json_decode($response, true);
-        return $data['results'] ?? [];
+        if (!empty($data['results'])) {
+            return array_slice($data['results'], 0, $count);
+        }
     }
     
-    error_log("Quiz API Error: HTTP $http_code");
-    return getFallbackQuestions($category);
+    return [];
 }
 
-// Questions de secours adaptées à la catégorie
-function getFallbackQuestions($category = 11) {
-    if ($category == 14) { // Séries TV
-        return [
-            [
-                'question' => 'Dans%20quelle%20s%C3%A9rie%20trouve-t-on%20les%20personnages%20de%20Walter%20White%20et%20Jesse%20Pinkman%3F',
-                'correct_answer' => 'Breaking%20Bad',
-                'incorrect_answers' => ['The%20Wire', 'Narcos', 'Better%20Call%20Saul'],
-                'type' => 'multiple'
-            ],
-            [
-                'question' => 'Combien%20y%20a-t-il%20de%20saisons%20de%20Friends%3F',
-                'correct_answer' => '10',
-                'incorrect_answers' => ['8', '9', '11'],
-                'type' => 'multiple'
-            ],
-            [
-                'question' => 'Quel%20est%20le%20nom%20de%20la%20maison%20dans%20Game%20of%20Thrones%20dont%20la%20devise%20est%20%22Winter%20is%20Coming%22%3F',
-                'correct_answer' => 'Stark',
-                'incorrect_answers' => ['Lannister', 'Targaryen', 'Baratheon'],
-                'type' => 'multiple'
-            ]
-        ];
-    } else { // Films
-        return [
-            [
-                'question' => 'Dans%20quel%20film%20entend-on%20la%20citation%20%22I%26%2339%3Bll%20be%20back%22%3F',
-                'correct_answer' => 'Terminator',
-                'incorrect_answers' => ['Matrix', 'Alien', 'RoboCop'],
-                'type' => 'multiple'
-            ],
-            [
-                'question' => 'Qui%20a%20r%C3%A9alis%C3%A9%20le%20film%20%22Inception%22%3F',
-                'correct_answer' => 'Christopher%20Nolan',
-                'incorrect_answers' => ['Steven%20Spielberg', 'James%20Cameron', 'Quentin%20Tarantino'],
-                'type' => 'multiple'
-            ],
-            [
-                'question' => 'Quel%20acteur%20joue%20le%20r%C3%B4le%20principal%20dans%20%22Forrest%20Gump%22%3F',
-                'correct_answer' => 'Tom%20Hanks',
-                'incorrect_answers' => ['Brad%20Pitt', 'Johnny%20Depp', 'Leonardo%20DiCaprio'],
-                'type' => 'multiple'
-            ]
-        ];
+// Fonction pour récupérer des séries populaires
+function fetchPopularTVShowsForQuiz($count = 20) {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . 'tv/popular?api_key=' . $api_key . '&language=fr-FR&page=1';
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'CineTrack/1.0'
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($response) {
+        $data = json_decode($response, true);
+        if (!empty($data['results'])) {
+            return array_slice($data['results'], 0, $count);
+        }
     }
+    
+    return [];
 }
 
-// Récupérer les questions
-$questions = fetchQuizQuestions($amount, $category_id, $difficulty);
+// Fonction pour récupérer les détails d'un film
+function fetchMovieDetails($movie_id) {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . 'movie/' . $movie_id . '?api_key=' . $api_key . '&language=fr-FR';
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'CineTrack/1.0'
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($response) {
+        return json_decode($response, true);
+    }
+    
+    return null;
+}
 
-// Traitement des résultats si le formulaire est soumis
+// Fonction pour récupérer les crédits d'un film
+function fetchMovieCredits($movie_id) {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . 'movie/' . $movie_id . '/credits?api_key=' . $api_key . '&language=fr-FR';
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'CineTrack/1.0'
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($response) {
+        return json_decode($response, true);
+    }
+    
+    return null;
+}
+
+// Fonction pour récupérer les détails d'une série
+function fetchTVShowDetails($tv_id) {
+    $api_key = TMDB_API_KEY;
+    $url = TMDB_BASE_URL . 'tv/' . $tv_id . '?api_key=' . $api_key . '&language=fr-FR';
+    
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_USERAGENT => 'CineTrack/1.0'
+    ]);
+    
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    if ($response) {
+        return json_decode($response, true);
+    }
+    
+    return null;
+}
+
+// Fonction pour générer des questions sur les films
+function generateMovieQuestions($movies) {
+    $questions = [];
+    
+    foreach ($movies as $movie) {
+        $movie_details = fetchMovieDetails($movie['id']);
+        $movie_credits = fetchMovieCredits($movie['id']);
+        
+        if (!$movie_details || !$movie_credits) {
+            continue;
+        }
+        
+        $title = $movie_details['title'];
+        $year = substr($movie_details['release_date'], 0, 4);
+        
+        // Trouver le réalisateur
+        $director = '';
+        foreach ($movie_credits['crew'] as $person) {
+            if ($person['job'] === 'Director') {
+                $director = $person['name'];
+                break;
+            }
+        }
+        
+        // Questions possibles
+        $possible_questions = [];
+        
+        // Question sur le réalisateur
+        if (!empty($director)) {
+            $possible_questions[] = [
+                'question' => "Qui a réalisé le film \"$title\" ?",
+                'correct_answer' => $director,
+                'type' => 'movie',
+                'movie_title' => $title
+            ];
+        }
+        
+        // Question sur l'année
+        if (!empty($year)) {
+            $possible_questions[] = [
+                'question' => "En quelle année est sorti le film \"$title\" ?",
+                'correct_answer' => $year,
+                'type' => 'movie',
+                'movie_title' => $title
+            ];
+        }
+        
+        // Prendre une question au hasard
+        if (!empty($possible_questions)) {
+            $selected_question = $possible_questions[array_rand($possible_questions)];
+            
+            // Générer des réponses incorrectes
+            $incorrect_answers = [];
+            
+            if (strpos($selected_question['question'], 'réalisé') !== false) {
+                // Pour les réalisateurs
+                $fake_directors = ['Steven Spielberg', 'Christopher Nolan', 'Quentin Tarantino', 'Martin Scorsese', 'James Cameron'];
+                shuffle($fake_directors);
+                $incorrect_answers = array_slice($fake_directors, 0, 3);
+            } else {
+                // Pour les années
+                $year_int = (int)$year;
+                $incorrect_answers = [
+                    (string)($year_int - 1),
+                    (string)($year_int + 1),
+                    (string)($year_int - 2)
+                ];
+            }
+            
+            $selected_question['incorrect_answers'] = $incorrect_answers;
+            $questions[] = $selected_question;
+        }
+        
+        if (count($questions) >= QUIZ_QUESTIONS_COUNT) {
+            break;
+        }
+    }
+    
+    return $questions;
+}
+
+// Fonction pour générer des questions sur les séries
+function generateTVQuestions($tv_shows) {
+    $questions = [];
+    
+    foreach ($tv_shows as $show) {
+        $tv_details = fetchTVShowDetails($show['id']);
+        
+        if (!$tv_details) {
+            continue;
+        }
+        
+        $title = $tv_details['name'];
+        $year = substr($tv_details['first_air_date'], 0, 4);
+        
+        // Question sur l'année de création
+        if (!empty($year)) {
+            $year_int = (int)$year;
+            
+            $questions[] = [
+                'question' => "En quelle année a commencé la série \"$title\" ?",
+                'correct_answer' => $year,
+                'incorrect_answers' => [
+                    (string)($year_int - 1),
+                    (string)($year_int + 1),
+                    (string)($year_int + 2)
+                ],
+                'type' => 'tv',
+                'show_title' => $title
+            ];
+        }
+        
+        if (count($questions) >= QUIZ_QUESTIONS_COUNT) {
+            break;
+        }
+    }
+    
+    return $questions;
+}
+
+// Fonction pour générer des questions de quiz
+function generateQuizQuestions() {
+    $questions = [];
+    
+    // Récupérer des films populaires
+    $movies = fetchPopularMoviesForQuiz(10);
+    $movie_questions = generateMovieQuestions($movies);
+    
+    // Récupérer des séries populaires
+    $tv_shows = fetchPopularTVShowsForQuiz(10);
+    $tv_questions = generateTVQuestions($tv_shows);
+    
+    // Combiner les questions
+    $all_questions = array_merge($movie_questions, $tv_questions);
+    shuffle($all_questions);
+    
+    // Prendre le nombre requis de questions
+    $questions = array_slice($all_questions, 0, QUIZ_QUESTIONS_COUNT);
+    
+    // Si pas assez de questions, ajouter des questions de secours
+    if (count($questions) < QUIZ_QUESTIONS_COUNT) {
+        $questions = array_merge($questions, getFallbackQuestions());
+        $questions = array_slice($questions, 0, QUIZ_QUESTIONS_COUNT);
+    }
+    
+    // Mélanger les réponses pour chaque question
+    foreach ($questions as &$question) {
+        $all_answers = array_merge([$question['correct_answer']], $question['incorrect_answers']);
+        shuffle($all_answers);
+        $question['all_answers'] = $all_answers;
+    }
+    
+    return $questions;
+}
+
+// Questions de secours en français
+function getFallbackQuestions() {
+    return [
+        [
+            'question' => 'Quel réalisateur a dirigé la trilogie "Le Seigneur des Anneaux" ?',
+            'correct_answer' => 'Peter Jackson',
+            'incorrect_answers' => ['Steven Spielberg', 'Christopher Nolan', 'James Cameron'],
+            'type' => 'movie',
+            'movie_title' => 'Le Seigneur des Anneaux'
+        ],
+        [
+            'question' => 'Quel acteur joue le rôle de Tony Stark/Iron Man dans l\'univers cinématographique Marvel ?',
+            'correct_answer' => 'Robert Downey Jr.',
+            'incorrect_answers' => ['Chris Evans', 'Chris Hemsworth', 'Mark Ruffalo'],
+            'type' => 'movie',
+            'movie_title' => 'Iron Man'
+        ],
+        [
+            'question' => 'Quelle série a remporté le plus d\'Emmy Awards en une seule année ?',
+            'correct_answer' => 'Game of Thrones',
+            'incorrect_answers' => ['Breaking Bad', 'The Crown', 'Stranger Things'],
+            'type' => 'tv',
+            'show_title' => 'Game of Thrones'
+        ],
+        [
+            'question' => 'Quel film a remporté l\'Oscar du meilleur film en 2020 ?',
+            'correct_answer' => 'Parasite',
+            'incorrect_answers' => ['1917', 'Joker', 'Once Upon a Time in Hollywood'],
+            'type' => 'movie',
+            'movie_title' => 'Parasite'
+        ],
+        [
+            'question' => 'Quelle actrice joue Hermione Granger dans la saga "Harry Potter" ?',
+            'correct_answer' => 'Emma Watson',
+            'incorrect_answers' => ['Emma Stone', 'Keira Knightley', 'Natalie Portman'],
+            'type' => 'movie',
+            'movie_title' => 'Harry Potter'
+        ],
+        [
+            'question' => 'Quelle est la plus longue série télévisée de l\'histoire en nombre d\'épisodes ?',
+            'correct_answer' => 'Les Feux de l\'Amour',
+            'incorrect_answers' => ['Grey\'s Anatomy', 'Doctor Who', 'Simpsons'],
+            'type' => 'tv',
+            'show_title' => 'Les Feux de l\'Amour'
+        ],
+        [
+            'question' => 'Quel réalisateur français a remporté la Palme d\'Or à Cannes pour "Titane" ?',
+            'correct_answer' => 'Julia Ducournau',
+            'incorrect_answers' => ['Luc Besson', 'Jean-Pierre Jeunet', 'Céline Sciamma'],
+            'type' => 'movie',
+            'movie_title' => 'Titane'
+        ],
+        [
+            'question' => 'Quel film détient le record du plus grand box-office mondial ?',
+            'correct_answer' => 'Avatar',
+            'incorrect_answers' => ['Avengers: Endgame', 'Titanic', 'Star Wars: Le Réveil de la Force'],
+            'type' => 'movie',
+            'movie_title' => 'Avatar'
+        ],
+        [
+            'question' => 'Quelle plateforme de streaming a produit la série "Stranger Things" ?',
+            'correct_answer' => 'Netflix',
+            'incorrect_answers' => ['Amazon Prime', 'Disney+', 'HBO Max'],
+            'type' => 'tv',
+            'show_title' => 'Stranger Things'
+        ],
+        [
+            'question' => 'Quel acteur a joué le Joker dans "The Dark Knight" ?',
+            'correct_answer' => 'Heath Ledger',
+            'incorrect_answers' => ['Joaquin Phoenix', 'Jack Nicholson', 'Jared Leto'],
+            'type' => 'movie',
+            'movie_title' => 'The Dark Knight'
+        ]
+    ];
+}
+
+// Gestion de la soumission du quiz
 $score = 0;
+$total_questions = 0;
 $user_answers = [];
 $show_results = false;
+$questions = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_quiz'])) {
-    $show_results = true;
-    
-    foreach ($questions as $index => $question) {
-        $question_key = 'q' . $index;
-        if (isset($_POST[$question_key])) {
-            $user_answer = urldecode($_POST[$question_key]);
-            $correct_answer = urldecode($question['correct_answer']);
-            
-            $user_answers[$index] = [
-                'user_answer' => $user_answer,
-                'correct_answer' => $correct_answer,
-                'is_correct' => ($user_answer === $correct_answer)
-            ];
-            
-            if ($user_answer === $correct_answer) {
-                $score++;
-            }
-        }
-    }
-    if (isset($_SESSION['user_id']) && !empty($questions)) {
-        $user_id = $_SESSION['user_id'];
-        $score_data = json_encode($user_answers);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Récupérer les questions de la session
+    if (isset($_SESSION['quiz_questions'])) {
+        $questions = $_SESSION['quiz_questions'];
         $total_questions = count($questions);
-        $percentage = $total_questions > 0 ? round(($score / $total_questions) * 100, 2) : 0;
         
-        try {
-            $stmt = $mysqli->prepare("
-                INSERT INTO quiz_scores (user_id, score, total_questions, percentage, answers_data, quiz_date, category_id) 
-                VALUES (?, ?, ?, ?, ?, NOW(), ?)
-            ");
-            $stmt->bind_param("iiidsi", $user_id, $score, $total_questions, $percentage, $score_data, $category_id);
-            
-            if ($stmt->execute()) {
-                error_log("Quiz score saved for user $user_id: $score/$total_questions ($percentage%)");
-            } else {
-                error_log("Failed to save quiz score: " . $stmt->error);
+        // Calculer le score
+        foreach ($questions as $index => $question) {
+            $question_key = 'question_' . $index;
+            if (isset($_POST[$question_key])) {
+                $user_answer = trim($_POST[$question_key]);
+                $user_answers[$index] = $user_answer;
+                
+                if (strcasecmp($user_answer, $question['correct_answer']) == 0) {
+                    $score++;
+                }
             }
-            $stmt->close();
-            
-        } catch (Exception $e) {
-            error_log("Error saving quiz score: " . $e->getMessage());
         }
+        
+        $show_results = true;
+        
+        // Sauvegarder le score dans la session
+        $_SESSION['last_quiz_score'] = $score;
+        $_SESSION['last_quiz_total'] = $total_questions;
+        $_SESSION['last_quiz_date'] = date('Y-m-d');
     }
-}
-
-// Calculer le pourcentage
-$percentage = count($questions) > 0 ? round(($score / count($questions)) * 100) : 0;
-
-// Messages personnalisés par catégorie
-$category_messages = [
-    11 => [ // Films
-        90 => "🎬 Expert cinéma ! Vous êtes incroyable !",
-        70 => "👏 Très bon score ! Vaste culture cinématographique !",
-        50 => "👍 Pas mal ! Vous connaissez bien vos classiques.",
-        30 => "🤔 Quelques révisions nécessaires, mais bon essai !",
-        0 => "😅 Il est temps de regarder plus de films !"
-    ],
-    14 => [ // Séries TV
-        90 => "📺 Expert séries ! Vous êtes un vrai binge-watcher !",
-        70 => "👏 Excellent ! Vous connaissez vos séries sur le bout des doigts !",
-        50 => "👍 Pas mal ! Vous avez de bonnes connaissances en séries !",
-        30 => "🤔 Il est temps de rattraper quelques épisodes !",
-        0 => "😅 Peut-être devriez-vous commencer une nouvelle série !"
-    ]
-];
-
-// Utiliser le message spécifique à la catégorie
-$final_message = "😅 Il est temps de regarder plus de {$current_category['name']} !";
-$message_list = $category_messages[$category_id];
-
-foreach ($message_list as $threshold => $message) {
-    if ($percentage >= $threshold) {
-        $final_message = $message;
-        break;
+} else {
+    // Nouveau quiz - générer les questions
+    $questions = generateQuizQuestions();
+    
+    // Mélanger les réponses pour chaque question
+    foreach ($questions as &$question) {
+        $all_answers = array_merge([$question['correct_answer']], $question['incorrect_answers']);
+        shuffle($all_answers);
+        $question['all_answers'] = $all_answers;
     }
+    
+    // Sauvegarder les questions dans la session
+    $_SESSION['quiz_questions'] = $questions;
+    $_SESSION['quiz_generated_at'] = time();
+    $total_questions = count($questions);
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz <?php echo $current_category['name']; ?> - CineTrack</title>
+    <title>Quiz Cinéma - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
     <style>
-        .quiz-hero {
-            background: linear-gradient(135deg, <?php echo $current_category['color']; ?>10 0%, rgba(233, 30, 99, 0.1) 100%);
-            padding: 100px 0 50px;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
         }
         
-        .question-card {
-            background: rgba(30, 30, 40, 0.3);
+        .gradient-bg {
+            background: linear-gradient(135deg, #0a0e14 0%, #05080d 100%);
+            min-height: 100vh;
+        }
+        
+        .quiz-header-card {
+            background: linear-gradient(135deg, rgba(25, 25, 40, 0.9) 0%, rgba(15, 15, 30, 0.95) 100%);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 25px;
-            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 140, 0, 0.15);
+            border-radius: 16px;
         }
         
-        .question-card:hover {
-            border-color: <?php echo $current_category['color']; ?>30;
-            box-shadow: 0 10px 30px <?php echo $current_category['color']; ?>10;
-        }
-        
-        .question-number {
-            display: inline-block;
-            background: linear-gradient(135deg, <?php echo $current_category['color']; ?> 0%, <?php echo $current_category['color']; ?>CC 100%);
-            color: #000;
-            font-weight: bold;
-            padding: 5px 15px;
-            border-radius: 20px;
-            margin-bottom: 15px;
-        }
-        
-        .option-label {
-            display: block;
-            padding: 15px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            margin: 10px 0;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .option-label:hover {
-            background: <?php echo $current_category['color']; ?>10;
-            border-color: <?php echo $current_category['color']; ?>30;
-            transform: translateX(5px);
-        }
-        
-        .option-label input[type="radio"]:checked + span {
-            color: <?php echo $current_category['color']; ?>;
-            font-weight: bold;
-        }
-        
-        .option-label.correct {
-            background: rgba(76, 175, 80, 0.2);
-            border-color: rgba(76, 175, 80, 0.5);
-        }
-        
-        .option-label.incorrect {
-            background: rgba(244, 67, 54, 0.2);
-            border-color: rgba(244, 67, 54, 0.5);
-        }
-        
-        .score-circle {
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: conic-gradient(#4CAF50 0% <?php echo $percentage; ?>%, #333 <?php echo $percentage; ?>% 100%);
+        .question-counter {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 30px;
+            font-weight: bold;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+        }
+        
+        .type-badge {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .movie-badge {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+        
+        .tv-badge {
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #d8b4fe;
+        }
+        
+        .quiz-progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+        
+        .quiz-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff8c00 0%, #ffa500 100%);
+            transition: width 0.5s ease;
+        }
+        
+        .option-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .option-card:hover {
+            border-color: rgba(255, 140, 0, 0.3);
+            background: rgba(255, 140, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        
+        .option-card.selected {
+            border-color: rgba(255, 140, 0, 0.5);
+            background: rgba(255, 140, 0, 0.1);
+        }
+        
+        .answer-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+        
+        .answer-letter {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.7);
+            flex-shrink: 0;
+        }
+        
+        input[type="radio"]:checked + label .answer-letter {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            color: white;
+            border-color: rgba(255, 140, 0, 0.5);
+        }
+        
+        .question-progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .question-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff8c00 0%, #ffa500 100%);
+        }
+        
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #ff9d1a 0%, #ff7c1a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 140, 0, 0.3);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Styles pour les résultats */
+        .score-circle {
+            width: 180px;
+            height: 180px;
+            border: 4px solid;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 0 auto;
             position: relative;
         }
         
         .score-circle::before {
             content: '';
             position: absolute;
-            width: 160px;
-            height: 160px;
-            background: #1a1a2e;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
             border-radius: 50%;
+            background: conic-gradient(from 0deg, #ff8c00, #ff6b00, #ff8c00);
+            animation: rotate 3s linear infinite;
+            z-index: -1;
         }
         
-        .score-text {
-            position: relative;
-            z-index: 1;
-            font-size: 3rem;
-            font-weight: bold;
-            color: <?php echo $current_category['color']; ?>;
-        }
-        
-        .share-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-        
-        .share-btn {
-            padding: 12px 25px;
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .share-btn:hover {
-            transform: translateY(-3px);
-        }
-        
-        .share-twitter {
-            background: rgba(29, 161, 242, 0.2);
-            border-color: rgba(29, 161, 242, 0.3);
-        }
-        
-        .share-facebook {
-            background: rgba(66, 103, 178, 0.2);
-            border-color: rgba(66, 103, 178, 0.3);
-        }
-        
-        .timer {
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            background: <?php echo $current_category['color']; ?>20;
-            border: 2px solid <?php echo $current_category['color']; ?>;
+        .score-circle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: linear-gradient(135deg, #0a0e14 0%, #05080d 100%);
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            z-index: 100;
+            z-index: -1;
         }
         
-        .category-card {
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-        
-        .category-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        
-        .category-card.active {
-            border-color: <?php echo $current_category['color']; ?>;
-            box-shadow: 0 0 20px <?php echo $current_category['color']; ?>40;
-        }
-        
-        @media (max-width: 768px) {
-            .timer {
-                top: 80px;
-                right: 10px;
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
-            
-            .score-circle {
-                width: 150px;
-                height: 150px;
-            }
-            
-            .score-circle::before {
-                width: 120px;
-                height: 120px;
-            }
-            
-            .score-text {
-                font-size: 2.5rem;
-            }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body class="gradient-bg text-white">
+    <!-- Header -->
     <?php include '../includes/header.php'; ?>
     
-    <main>
-        <!-- Hero Section -->
-        <section class="quiz-hero">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h1 class="text-4xl md:text-6xl font-black mb-2">
-                    <?php echo $current_category['icon']; ?> Quiz <?php echo $current_category['name']; ?>
-                </h1>
-                <p class="text-xl text-gray-300 mb-8">
-                    Testez vos connaissances avec <?php echo count($questions); ?> questions
-                </p>
-                
-                <!-- Sélecteur de catégorie (seulement avant le quiz) -->
-                <?php if(!$show_results): ?>
-                <div class="mb-10">
-                    <h3 class="text-lg font-semibold mb-4 text-gray-300">Choisissez votre quiz :</h3>
-                    <div class="flex justify-center gap-6 max-w-xl mx-auto">
-                        <?php foreach($categories as $id => $cat): ?>
-                        <a href="quiz.php?cat=<?php echo $id; ?>" 
-                           class="category-card px-6 py-4 rounded-xl flex flex-col items-center gap-2 <?php echo $id == $category_id ? 'active' : 'bg-gray-800/50'; ?>"
-                           style="background: <?php echo $cat['color']; ?>20; border-color: <?php echo $cat['color']; ?>30; min-width: 140px;">
-                            <span class="text-3xl"><?php echo $cat['icon']; ?></span>
-                            <span class="font-bold text-lg"><?php echo $cat['name']; ?></span>
-                        </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                
-                <div class="flex flex-col md:flex-row gap-4 justify-center items-center mb-8">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-clock" style="color: <?php echo $current_category['color']; ?>"></i>
-                        <span>10 minutes max</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-question-circle" style="color: <?php echo $current_category['color']; ?>"></i>
-                        <span><?php echo count($questions); ?> questions</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-trophy" style="color: <?php echo $current_category['color']; ?>"></i>
-                        <span>Niveau <?php echo ucfirst($difficulty); ?></span>
-                    </div>
-                </div>
-                <?php endif; ?>
-            </div>
-        </section>
-        
-        <!-- Timer (seulement pendant le quiz) -->
-        <?php if(!$show_results): ?>
-        <div class="timer" id="quizTimer">10:00</div>
-        <?php endif; ?>
-        
-        <!-- Quiz Content -->
-        <section class="py-12">
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                
-                <?php if($show_results): ?>
-                <!-- Résultats -->
-                <div class="text-center mb-12">
-                    <h2 class="text-3xl font-bold mb-6">Vos Résultats</h2>
-                    
-                    <div class="score-circle">
-                        <div class="score-text"><?php echo $score; ?>/<?php echo count($questions); ?></div>
-                    </div>
-                    
-                    <h3 class="text-2xl font-bold mb-4"><?php echo $final_message; ?></h3>
-                    <p class="text-gray-300 text-lg mb-8">
-                        Score : <?php echo $score; ?> sur <?php echo count($questions); ?> (<?php echo $percentage; ?>%)
-                    </p>
-                    
-                    <div class="share-buttons">
-                        <a href="https://twitter.com/intent/tweet?text=J%27ai%20obtenu%20<?php echo $score; ?>%2F<?php echo count($questions); ?>%20au%20Quiz%20<?php echo urlencode($current_category['name']); ?>%20sur%20%40CineTrack&url=<?php echo urlencode(SITE_URL . '/pages/quiz.php?cat=' . $category_id); ?>"
-                           target="_blank" class="share-btn share-twitter">
-                            <i class="fab fa-twitter"></i> Partager sur Twitter
-                        </a>
-                        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode(SITE_URL . '/pages/quiz.php?cat=' . $category_id); ?>"
-                           target="_blank" class="share-btn share-facebook">
-                            <i class="fab fa-facebook"></i> Partager sur Facebook
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Détails des réponses -->
-                <div class="mb-12">
-                    <h3 class="text-2xl font-bold mb-6">Correction</h3>
-                    
-                    <?php foreach($questions as $index => $question): 
-                        $user_answer_data = $user_answers[$index] ?? null;
-                        $question_text = urldecode($question['question']);
-                        $correct_answer = urldecode($question['correct_answer']);
-                    ?>
-                    <div class="question-card">
-                        <div class="question-number">Question <?php echo $index + 1; ?></div>
-                        <h4 class="text-xl font-bold mb-4"><?php echo htmlspecialchars($question_text); ?></h4>
+    <main class="min-h-screen py-8 px-4 md:px-6 pt-24">
+        <div class="max-w-4xl mx-auto">
+            
+            <?php if (!$show_results): ?>
+                <!-- En-tête du quiz - Style de l'image -->
+                <div class="quiz-header-card p-6 mb-8 fade-in">
+                    <!-- Défi quotidien -->
+                    <div class="mb-6">
+                        <div class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 mb-4">
+                            <i class="fas fa-bolt text-orange-400 mr-2"></i>
+                            <span class="text-orange-400 font-semibold">Défi quotidien - 10 questions - 100% français</span>
+                        </div>
                         
-                        <div class="space-y-3">
-                            <?php 
-                            // Toutes les options
-                            $all_options = array_merge(
-                                [$question['correct_answer']],
-                                $question['incorrect_answers']
-                            );
-                            shuffle($all_options);
-                            
-                            foreach($all_options as $option):
-                                $option_text = urldecode($option);
-                                $is_correct = ($option === $question['correct_answer']);
-                                $is_user_answer = ($user_answer_data && urldecode($user_answer_data['user_answer']) === $option_text);
-                                
-                                $class = 'option-label';
-                                if ($is_correct) $class .= ' correct';
-                                if ($is_user_answer && !$is_correct) $class .= ' incorrect';
-                            ?>
-                            <div class="<?php echo $class; ?>">
-                                <span>
-                                    <?php echo htmlspecialchars($option_text); ?>
-                                    <?php if($is_correct): ?>
-                                        <i class="fas fa-check text-green-500 ml-2"></i>
-                                    <?php elseif($is_user_answer && !$is_correct): ?>
-                                        <i class="fas fa-times text-red-500 ml-2"></i>
-                                    <?php endif; ?>
-                                </span>
+                        <!-- Titre et date -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-white mb-1">Quiz du jour</h2>
+                                <p class="text-gray-400"><?php echo date('d/m/Y'); ?></p>
                             </div>
-                            <?php endforeach; ?>
+                            
+                            <!-- Stats -->
+                            <div class="flex items-center gap-6">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white"><?php echo $total_questions; ?>/10</div>
+                                    <div class="text-gray-400 text-sm">Questions</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-white">~10</div>
+                                    <div class="text-gray-400 text-sm">minutes</div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <?php if($user_answer_data): ?>
-                        <div class="mt-4 p-4 <?php echo $user_answer_data['is_correct'] ? 'bg-green-500/20' : 'bg-red-500/20'; ?> rounded-lg">
-                            <p class="font-semibold">
-                                <?php if($user_answer_data['is_correct']): ?>
-                                    ✅ Bonne réponse ! Vous avez choisi : <span class="text-green-300"><?php echo htmlspecialchars($user_answer_data['user_answer']); ?></span>
-                                <?php else: ?>
-                                    ❌ Mauvaise réponse. Vous avez choisi : <span class="text-red-300"><?php echo htmlspecialchars($user_answer_data['user_answer']); ?></span><br>
-                                    La bonne réponse était : <span class="text-green-300"><?php echo htmlspecialchars($user_answer_data['correct_answer']); ?></span>
-                                <?php endif; ?>
-                            </p>
+                        <!-- Barre de progression globale -->
+                        <div>
+                            <div class="flex items-center justify-between text-sm text-gray-400 mb-2">
+                                <span>Votre progression</span>
+                                <span><?php echo $total_questions; ?>/10 questions</span>
+                            </div>
+                            <div class="quiz-progress-bar">
+                                <div class="quiz-progress-fill" style="width: <?php echo ($total_questions / 10 * 100); ?>%"></div>
+                            </div>
                         </div>
-                        <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                
-                <!-- Actions après le quiz -->
-                <div class="text-center space-y-6">
-                    <div class="flex flex-wrap justify-center gap-4 mb-6">
-                        <a href="quiz.php?cat=<?php echo $category_id; ?>" class="px-8 py-4 rounded-xl text-lg font-bold inline-block" style="background: <?php echo $current_category['color']; ?>;">
-                            <i class="fas fa-redo mr-2"></i> Nouveau quiz <?php echo $current_category['name']; ?>
-                        </a>
-                        <a href="quiz.php" class="bg-gray-700 hover:bg-gray-600 px-8 py-4 rounded-xl text-lg font-bold inline-block">
-                            <i class="fas fa-random mr-2"></i> Changer de catégorie
-                        </a>
-                    </div>
-                    
-                    <div class="text-gray-400">
-                        <p class="mb-2">Vous voulez en savoir plus ?</p>
-                        <?php if($category_id == 11): ?>
-                            <a href="films.php" class="text-yellow-500 hover:text-yellow-400 font-semibold">
-                                <i class="fas fa-film mr-2"></i> Découvrir plus de films
-                            </a>
-                        <?php elseif($category_id == 14): ?>
-                            <a href="series.php" class="text-purple-500 hover:text-purple-400 font-semibold">
-                                <i class="fas fa-tv mr-2"></i> Découvrir plus de séries
-                            </a>
-                        <?php endif; ?>
                     </div>
                 </div>
-                
-                <?php else: ?>
+
                 <!-- Formulaire du quiz -->
-                <form method="POST" action="" id="quizForm">
-                    <input type="hidden" name="category_id" value="<?php echo $category_id; ?>">
-                    
-                    <?php if(empty($questions)): ?>
-                        <div class="text-center py-12">
-                            <i class="fas fa-exclamation-triangle text-4xl mb-4" style="color: <?php echo $current_category['color']; ?>"></i>
-                            <h3 class="text-2xl font-bold mb-2">Problème technique</h3>
-                            <p class="text-gray-300 mb-6">Impossible de charger les questions pour le moment.</p>
-                            <a href="quiz.php?cat=<?php echo $category_id; ?>" class="px-6 py-3 rounded-xl font-semibold inline-block" style="background: <?php echo $current_category['color']; ?>;">
-                                <i class="fas fa-sync mr-2"></i> Réessayer
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach($questions as $index => $question): 
-                            $question_text = urldecode($question['question']);
-                        ?>
-                        <div class="question-card">
-                            <div class="question-number">Question <?php echo $index + 1; ?></div>
-                            <h4 class="text-xl font-bold mb-6"><?php echo htmlspecialchars($question_text); ?></h4>
-                            
-                            <div class="space-y-3">
-                                <?php 
-                                // Mélanger les options
-                                $all_options = array_merge(
-                                    [$question['correct_answer']],
-                                    $question['incorrect_answers']
-                                );
-                                shuffle($all_options);
+                <form method="POST" id="quizForm" class="space-y-6">
+                    <?php foreach ($questions as $index => $question): ?>
+                        <div class="glass-card p-6 rounded-xl fade-in" style="animation-delay: <?php echo $index * 0.1; ?>s">
+                            <!-- En-tête de la question -->
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="question-counter">
+                                        <?php echo $index + 1; ?>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-gray-300 font-medium">Question <?php echo $index + 1; ?>/10</span>
+                                        <span class="type-badge <?php echo $question['type'] === 'movie' ? 'movie-badge' : 'tv-badge'; ?>">
+                                            <i class="fas <?php echo $question['type'] === 'movie' ? 'fa-film' : 'fa-tv'; ?> mr-1"></i>
+                                            <?php echo $question['type'] === 'movie' ? 'Film' : 'Série'; ?>
+                                        </span>
+                                    </div>
+                                </div>
                                 
-                                foreach($all_options as $option_index => $option):
-                                    $option_text = urldecode($option);
-                                ?>
-                                <label class="option-label">
-                                    <input type="radio" 
-                                           name="q<?php echo $index; ?>" 
-                                           value="<?php echo htmlspecialchars($option_text); ?>"
-                                           required>
-                                    <span><?php echo htmlspecialchars($option_text); ?></span>
-                                </label>
+                                <!-- Barre de progression de la question -->
+                                <div class="hidden md:block w-32">
+                                    <div class="question-progress-bar">
+                                        <div class="question-progress-fill" style="width: <?php echo (($index + 1) / 10 * 100); ?>%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Question -->
+                            <h3 class="text-xl font-bold mb-6 text-white leading-relaxed">
+                                <?php echo htmlspecialchars($question['question']); ?>
+                            </h3>
+                            
+                            <?php if (isset($question['movie_title']) || isset($question['show_title'])): ?>
+                                <div class="mb-6 p-4 rounded-lg bg-gradient-to-r from-orange-500/5 to-transparent border-l-4 border-orange-500">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas fa-info-circle text-orange-400"></i>
+                                        <span class="text-gray-300">
+                                            <span class="text-gray-400">À propos :</span>
+                                            <strong class="ml-2 text-orange-300"><?php echo htmlspecialchars($question['movie_title'] ?? $question['show_title']); ?></strong>
+                                        </span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <!-- Options de réponse -->
+                            <div class="grid gap-3">
+                                <?php foreach ($question['all_answers'] as $answer_index => $answer): ?>
+                                    <div class="option-card p-4 rounded-lg">
+                                        <input type="radio" 
+                                               name="question_<?php echo $index; ?>" 
+                                               value="<?php echo htmlspecialchars($answer); ?>" 
+                                               id="q<?php echo $index; ?>_a<?php echo $answer_index; ?>"
+                                               class="hidden peer">
+                                        <label for="q<?php echo $index; ?>_a<?php echo $answer_index; ?>" 
+                                               class="answer-option cursor-pointer">
+                                            <div class="answer-letter">
+                                                <?php echo chr(65 + $answer_index); ?>
+                                            </div>
+                                            <span class="text-gray-200"><?php echo htmlspecialchars($answer); ?></span>
+                                        </label>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
-                        <?php endforeach; ?>
-                        
-                        <div class="text-center mt-12">
-                            <button type="submit" 
-                                    name="submit_quiz" 
-                                    class="px-10 py-4 rounded-xl text-lg font-bold hover:scale-105 transition-transform"
-                                    style="background: <?php echo $current_category['color']; ?>;">
-                                <i class="fas fa-paper-plane mr-2"></i> Voir mon score
-                            </button>
-                            
-                            <p class="text-gray-400 mt-4 text-sm">
-                                <i class="fas fa-lightbulb mr-2"></i>
-                                Répondez à toutes les questions pour voir votre score
-                            </p>
-                        </div>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
+                    
+                    <!-- Bouton de soumission -->
+                    <div class="text-center mt-10">
+                        <button type="submit" 
+                                class="btn-primary px-12 py-4 rounded-xl text-lg font-bold inline-flex items-center gap-3">
+                            <i class="fas fa-paper-plane"></i>
+                            Valider mes réponses
+                        </button>
+                        <p class="text-gray-400 mt-4 text-sm">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Une fois validées, vos réponses ne pourront plus être modifiées
+                        </p>
+                    </div>
                 </form>
-                <?php endif; ?>
-            </div>
-        </section>
+                
+            <?php else: ?>
+                <!-- Résultats du quiz -->
+                <div class="fade-in">
+                    <!-- En-tête des résultats -->
+                    <div class="quiz-header-card p-8 text-center mb-8">
+                        <div class="inline-flex items-center gap-3 mb-6">
+                            <div class="p-4 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-600/20">
+                                <i class="fas fa-trophy text-3xl text-yellow-400"></i>
+                            </div>
+                            <h2 class="text-3xl font-bold text-white">
+                                Votre Score
+                            </h2>
+                        </div>
+                        
+                        <div class="mb-8">
+                            <?php
+                            $percentage = ($score / $total_questions) * 100;
+                            $color_class = '';
+                            $message = '';
+                            $icon = '';
+                            
+                            if ($percentage >= 80) {
+                                $color_class = 'border-green-500 text-green-400';
+                                $message = 'Excellent ! Vous êtes un vrai cinéphile ! 🎬';
+                                $icon = 'fas fa-crown';
+                            } elseif ($percentage >= 60) {
+                                $color_class = 'border-blue-500 text-blue-400';
+                                $message = 'Très bon score ! Continue comme ça ! 👍';
+                                $icon = 'fas fa-star';
+                            } elseif ($percentage >= 40) {
+                                $color_class = 'border-yellow-500 text-yellow-400';
+                                $message = 'Pas mal ! Il y a encore des choses à découvrir ! 💡';
+                                $icon = 'fas fa-lightbulb';
+                            } else {
+                                $color_class = 'border-orange-500 text-orange-400';
+                                $message = 'Il est temps de regarder plus de films ! 😊';
+                                $icon = 'fas fa-film';
+                            }
+                            ?>
+                            
+                            <div class="score-circle <?php echo $color_class; ?> mb-6 mx-auto">
+                                <div class="relative z-10">
+                                    <div class="text-4xl font-bold"><?php echo $score; ?>/<?php echo $total_questions; ?></div>
+                                    <div class="text-sm text-gray-400 mt-1"><?php echo round($percentage); ?>%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <div class="flex items-center justify-center gap-2 text-xl font-semibold mb-2">
+                                    <i class="<?php echo $icon; ?> text-orange-400"></i>
+                                    <span class="text-gray-300"><?php echo $message; ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Barre de progression -->
+                        <div class="max-w-md mx-auto mb-6">
+                            <div class="flex justify-between mb-3 text-sm">
+                                <span class="text-gray-400">Votre progression</span>
+                                <span class="font-bold"><?php echo $score; ?> sur <?php echo $total_questions; ?> questions</span>
+                            </div>
+                            <div class="quiz-progress-bar w-full">
+                                <div class="quiz-progress-fill" style="width: <?php echo $percentage; ?>%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Détail des réponses -->
+                    <div class="glass-card p-6 rounded-xl mb-8">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20">
+                                <i class="fas fa-clipboard-check text-green-400"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white">
+                                Détail des réponses
+                            </h3>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <?php foreach ($_SESSION['quiz_questions'] as $index => $question): ?>
+                                <?php
+                                $user_answer = $user_answers[$index] ?? '';
+                                $is_correct = strcasecmp($user_answer, $question['correct_answer']) == 0;
+                                ?>
+                                <div class="p-5 rounded-lg border <?php echo $is_correct ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'; ?>">
+                                    <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+                                        <div class="flex items-center gap-4">
+                                            <div class="question-counter" style="background: <?php echo $is_correct ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'; ?>">
+                                                <?php echo $index + 1; ?>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-bold">Question <?php echo $index + 1; ?></span>
+                                                    <span class="type-badge <?php echo $question['type'] === 'movie' ? 'movie-badge' : 'tv-badge'; ?>">
+                                                        <?php echo $question['type'] === 'movie' ? 'Film' : 'Série'; ?>
+                                                    </span>
+                                                </div>
+                                                <span class="text-sm <?php echo $is_correct ? 'text-green-400' : 'text-red-400'; ?>">
+                                                    <?php echo $is_correct ? '+1 point' : '0 point'; ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <h4 class="text-lg font-semibold mb-4 text-gray-100"><?php echo htmlspecialchars($question['question']); ?></h4>
+                                    
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="text-gray-400 text-sm mb-2">Votre réponse</div>
+                                            <div class="p-3 rounded-lg bg-gray-800/50">
+                                                <?php echo htmlspecialchars($user_answer ?: 'Non répondue'); ?>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="text-gray-400 text-sm mb-2">Bonne réponse</div>
+                                            <div class="p-3 rounded-lg bg-gray-800/50 border border-green-500/30">
+                                                <?php echo htmlspecialchars($question['correct_answer']); ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex flex-wrap justify-center gap-4">
+                        <a href="quiz.php" 
+                           class="btn-primary px-8 py-4 rounded-xl font-bold inline-flex items-center gap-3">
+                            <i class="fas fa-redo"></i>
+                            Nouveau quiz
+                        </a>
+                        <a href="../index.php" 
+                           class="glass-card px-8 py-4 rounded-xl font-bold inline-flex items-center gap-3">
+                            <i class="fas fa-home"></i>
+                            Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
     </main>
     
+    <!-- Footer -->
     <?php include '../includes/footer.php'; ?>
     
     <script>
-    // Timer pour le quiz
-    <?php if(!$show_results): ?>
-    let timeLeft = 600; // 10 minutes en secondes
-    const timerElement = document.getElementById('quizTimer');
-    
-    function updateTimer() {
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        if (timeLeft <= 60) {
-            timerElement.style.background = 'rgba(244, 67, 54, 0.3)';
-            timerElement.style.borderColor = '#F44336';
-        }
-        
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            document.getElementById('quizForm').submit();
-        }
-        
-        timeLeft--;
-    }
-    
-    const timerInterval = setInterval(updateTimer, 1000);
-    updateTimer();
-    <?php endif; ?>
-    
-    // Animation des options
-    document.querySelectorAll('.option-label').forEach(label => {
-        label.addEventListener('click', function() {
-            // Désélectionner les autres options dans la même question
-            const questionContainer = this.closest('.question-card');
-            questionContainer.querySelectorAll('.option-label').forEach(otherLabel => {
-                otherLabel.style.background = 'rgba(255, 255, 255, 0.05)';
-                otherLabel.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        // Sélection automatique des options au clic
+        document.addEventListener('DOMContentLoaded', function() {
+            const optionCards = document.querySelectorAll('.option-card');
+            
+            optionCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Désélectionner toutes les autres options de la même question
+                    const input = card.querySelector('input[type="radio"]');
+                    const questionName = input.name;
+                    
+                    document.querySelectorAll(`input[name="${questionName}"]`).forEach(otherInput => {
+                        otherInput.closest('.option-card').classList.remove('selected');
+                    });
+                    
+                    // Sélectionner cette option
+                    input.checked = true;
+                    card.classList.add('selected');
+                });
             });
             
-            // Mettre en surbrillance l'option sélectionnée
-            this.style.background = '<?php echo $current_category['color']; ?>15';
-            this.style.borderColor = '<?php echo $current_category['color']; ?>40';
-        });
-    });
-    
-    // Vérifier si toutes les questions sont répondues avant soumission
-    document.getElementById('quizForm')?.addEventListener('submit', function(e) {
-        const totalQuestions = <?php echo count($questions); ?>;
-        let answered = 0;
-        
-        for (let i = 0; i < totalQuestions; i++) {
-            if (document.querySelector(`input[name="q${i}"]:checked`)) {
-                answered++;
+            // Validation du formulaire
+            const quizForm = document.getElementById('quizForm');
+            if (quizForm) {
+                quizForm.addEventListener('submit', function(e) {
+                    const answeredQuestions = new Set();
+                    document.querySelectorAll('input[type="radio"]:checked').forEach(input => {
+                        answeredQuestions.add(input.name);
+                    });
+                    
+                    if (answeredQuestions.size < <?php echo $total_questions; ?>) {
+                        e.preventDefault();
+                        const unanswered = <?php echo $total_questions; ?> - answeredQuestions.size;
+                        alert(`Il vous reste ${unanswered} question(s) sans réponse. Veuillez répondre à toutes les questions avant de soumettre.`);
+                    } else {
+                        // Afficher un loader
+                        const submitBtn = quizForm.querySelector('button[type="submit"]');
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul du score...';
+                        submitBtn.disabled = true;
+                    }
+                });
             }
-        }
-        
-        if (answered < totalQuestions) {
-            e.preventDefault();
-            alert(`Veuillez répondre à toutes les questions ! (${answered}/${totalQuestions} répondues)`);
-            return false;
-        }
-    });
+        });
     </script>
 </body>
 </html>

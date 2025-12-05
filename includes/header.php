@@ -73,9 +73,7 @@ if ($is_in_user) {
                         <a href="<?php echo $base_path; ?>pages/series.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'series.php' ? 'active' : ''; ?>">
                             Séries
                         </a>
-                        <a href="<?php echo $base_path; ?>pages/quiz.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'quiz.php' ? 'active' : ''; ?>">
-        Quiz
-    </a>
+                  
                         <?php if ($isLoggedIn): ?>
                             <a href="<?php echo $base_path; ?>pages/user/dashboard.php" class="nav-link">
                                 <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
@@ -181,10 +179,7 @@ if ($is_in_user) {
                         <i class="fas fa-tv"></i>
                         <span class="text-xs mt-1">Séries</span>
                     </a>
-                    <a href="<?php echo $base_path; ?>pages/quiz.php" class="mobile-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'quiz.php' ? 'active' : ''; ?>">
-        <i class="fas fa-question-circle"></i>
-        <span class="text-xs mt-1">Quiz</span>
-    </a>
+                  
                     <?php if ($isLoggedIn): ?>
                         <a href="<?php echo $base_path; ?>pages/user/dashboard.php" class="mobile-nav-link">
                             <i class="fas fa-tachometer-alt"></i>
