@@ -1,4 +1,8 @@
 <?php
+$cookieConsent = $_COOKIE['cookieConsent'] ?? null;
+
+?>
+<?php
 session_start();
 include 'includes/config.conf.php';
 
@@ -398,6 +402,8 @@ $features = [
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body class="gradient-bg text-white">
 
@@ -466,5 +472,43 @@ $features = [
     <?php include 'includes/footer.php'; ?>
 
     <script src="js/script.js"></script>
+<?php if (!$cookieConsent): ?>
+<!-- COOKIE BANNER -->
+<div id="cookieBanner" class="fixed bottom-0 left-0 w-full bg-gray-900 text-white p-5 shadow-lg z-[9999]">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-gray-300 text-sm">
+             CineTrack utilise des cookies pour améliorer votre expérience. 
+            Voulez-vous accepter les cookies ?
+        </p>
+
+        <div class="flex gap-3">
+            <button id="acceptCookies" 
+                class="px-5 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold text-sm">
+                Accepter tout
+            </button>
+
+            <button id="declineCookies" 
+                class="px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold text-sm">
+                Refuser
+            </button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<script>
+// ACCEPT ALL
+document.getElementById("acceptCookies")?.addEventListener("click", () => {
+    document.cookie = "cookieConsent=accepted; path=/; max-age=" + (60*60*24*180);
+    location.reload();
+});
+
+// DECLINE → only minimal cookie
+document.getElementById("declineCookies")?.addEventListener("click", () => {
+    document.cookie = "cookieConsent=declined; path=/; max-age=" + (60*60*24*180);
+    location.reload();
+});
+</script>
+
 </body>
 </html>
