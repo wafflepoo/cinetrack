@@ -241,117 +241,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])
             <?php else: ?>
                 <div class="space-y-6">
                     <?php foreach ($reservations as $reservation): 
-                        $is_upcoming = $reservation['reservation_date'] >= $today;
-                        $is_today = $reservation['reservation_date'] === $today;
-                    ?>
-                        <div class="reservation-card rounded-2xl p-6 <?php echo $is_upcoming ? 'upcoming' : 'past'; ?>" data-type="<?php echo $is_upcoming ? 'upcoming' : 'past'; ?>">
-                            <div class="flex flex-col md:flex-row gap-6">
-                                
-                                <!-- Poster du Film -->
-                                <div class="flex-shrink-0">
-                                    <?php if (!empty($reservation['film_poster'])): ?>
-                                        <img src="<?php echo htmlspecialchars($reservation['film_poster']); ?>" 
-                                             alt="<?php echo htmlspecialchars($reservation['film_title']); ?>"
-                                             class="film-poster shadow-lg">
-                                    <?php else: ?>
-                                        <div class="film-poster bg-gray-800 flex items-center justify-center">
-                                            <i class="fas fa-film text-4xl text-gray-600"></i>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <!-- Informations -->
-                                <div class="flex-1">
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div>
-                                            <div class="flex items-center gap-3 mb-2">
-                                                <span class="<?php echo $is_upcoming ? 'upcoming-badge' : 'past-badge'; ?> px-3 py-1 rounded-full text-xs font-bold">
-                                                    <?php echo $is_today ? '🔥 AUJOURD\'HUI' : ($is_upcoming ? '📅 À venir' : '✓ Passée'); ?>
-                                                </span>
-                                                <span class="bg-orange-500/20 px-3 py-1 rounded-full text-xs font-bold text-orange-500">
-                                                    Code: <?php echo htmlspecialchars($reservation['reservation_code']); ?>
-                                                </span>
-                                            </div>
-                                            
-                                            <h3 class="text-2xl font-bold mb-2">
-                                                <?php echo htmlspecialchars($reservation['film_title']); ?>
-                                            </h3>
-                                            
-                                            <div class="flex items-center gap-2 text-gray-400 mb-3">
-                                                <i class="fas fa-building text-orange-500"></i>
-                                                <span class="font-semibold"><?php echo htmlspecialchars($reservation['cinema_name']); ?></span>
-                                            </div>
-                                            
-                                            <?php if (!empty($reservation['cinema_address'])): ?>
-                                                <div class="flex items-center gap-2 text-gray-500 text-sm mb-3">
-                                                    <i class="fas fa-map-marker-alt"></i>
-                                                    <span><?php echo htmlspecialchars($reservation['cinema_address']); ?></span>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Détails de la Séance -->
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                        <div class="bg-gray-800/30 rounded-lg p-3">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <i class="fas fa-calendar text-orange-500"></i>
-                                                <span class="text-xs text-gray-400">Date</span>
-                                            </div>
-                                            <p class="font-bold"><?php echo date('d/m/Y', strtotime($reservation['reservation_date'])); ?></p>
-                                        </div>
-                                        
-                                        <div class="bg-gray-800/30 rounded-lg p-3">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <i class="fas fa-clock text-orange-500"></i>
-                                                <span class="text-xs text-gray-400">Heure</span>
-                                            </div>
-                                            <p class="font-bold"><?php echo $reservation['reservation_time']; ?></p>
-                                        </div>
-                                        
-                                        <div class="bg-gray-800/30 rounded-lg p-3">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <i class="fas fa-users text-orange-500"></i>
-                                                <span class="text-xs text-gray-400">Places</span>
-                                            </div>
-                                            <p class="font-bold"><?php echo $reservation['number_tickets']; ?> place<?php echo $reservation['number_tickets'] > 1 ? 's' : ''; ?></p>
-                                        </div>
-                                        
-                                        <div class="bg-gray-800/30 rounded-lg p-3">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <i class="fas fa-euro-sign text-orange-500"></i>
-                                                <span class="text-xs text-gray-400">Prix</span>
-                                            </div>
-                                            <p class="font-bold text-green-500"><?php echo number_format($reservation['total_price'], 2); ?>€</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Actions -->
-                                    <?php if ($is_upcoming): ?>
-                                        <div class="flex gap-3">
-                                            <button onclick="showQRCode('<?php echo $reservation['reservation_code']; ?>')" 
-                                                    style="background: linear-gradient(135deg, #7800ff 0%, #5500cc 100%);"
-                                                    class="flex-1 px-4 py-2 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2">
-                                                <i class="fas fa-qrcode"></i>
-                                                QR Code
-                                            </button>
-                                            
-                                            <button onclick="confirmCancel(<?php echo $reservation['id']; ?>, <?php echo htmlspecialchars(json_encode($reservation['film_title']), ENT_QUOTES); ?>)" 
-                                                    class="cancel-btn px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
-                                                <i class="fas fa-times-circle"></i>
-                                                Annuler
-                                            </button>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="bg-gray-800/30 rounded-lg p-3 text-center text-gray-500">
-                                            <i class="fas fa-check-circle mr-2"></i>
-                                            Séance terminée
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+    $is_upcoming = $reservation['reservation_date'] >= $today;
+    $is_today = $reservation['reservation_date'] === $today;
+?>
+    <div class="reservation-card rounded-2xl p-6 <?php echo $is_upcoming ? 'upcoming' : 'past'; ?>" data-type="<?php echo $is_upcoming ? 'upcoming' : 'past'; ?>">
+        <div class="flex flex-col md:flex-row gap-6">
+            
+            
+            <!-- Poster du Film -->
+<div class="flex-shrink-0">
+    <?php if (!empty($reservation['film_poster']) && $reservation['film_poster'] !== ''): ?>
+        <img src="<?php echo htmlspecialchars($reservation['film_poster']); ?>" 
+             alt="<?php echo htmlspecialchars($reservation['film_title']); ?>"
+             class="film-poster shadow-lg"
+             onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="film-poster bg-gray-800 items-center justify-center shadow-lg" style="display: none;">
+            <i class="fas fa-film text-4xl text-gray-600"></i>
+        </div>
+    <?php else: ?>
+        <div class="film-poster bg-gray-800 flex items-center justify-center shadow-lg">
+            <i class="fas fa-film text-4xl text-gray-600"></i>
+        </div>
+    <?php endif; ?>
+</div>
+            
+            <!-- Informations -->
+            <div class="flex-1">
+                <div class="flex items-start justify-between mb-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="<?php echo $is_upcoming ? 'upcoming-badge' : 'past-badge'; ?> px-3 py-1 rounded-full text-xs font-bold">
+                                <?php echo $is_today ? '🔥 AUJOURD\'HUI' : ($is_upcoming ? '📅 À venir' : '✓ Passée'); ?>
+                            </span>
+                            <span class="bg-orange-500/20 px-3 py-1 rounded-full text-xs font-bold text-orange-500">
+                                Code: <?php echo htmlspecialchars($reservation['reservation_code']); ?>
+                            </span>
                         </div>
-                    <?php endforeach; ?>
+                        
+                        <h3 class="text-2xl font-bold mb-2">
+                            <?php echo htmlspecialchars($reservation['film_title']); ?>
+                        </h3>
+                        
+                        <div class="flex items-center gap-2 text-gray-400 mb-3">
+                            <i class="fas fa-building text-orange-500"></i>
+                            <span class="font-semibold"><?php echo htmlspecialchars($reservation['cinema_name']); ?></span>
+                        </div>
+                        
+                        <?php if (!empty($reservation['cinema_address'])): ?>
+                            <div class="flex items-center gap-2 text-gray-500 text-sm mb-3">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span><?php echo htmlspecialchars($reservation['cinema_address']); ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Détails de la Séance -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-800/30 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-calendar text-orange-500"></i>
+                            <span class="text-xs text-gray-400">Date</span>
+                        </div>
+                        <p class="font-bold"><?php echo date('d/m/Y', strtotime($reservation['reservation_date'])); ?></p>
+                    </div>
+                    
+                    <div class="bg-gray-800/30 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-clock text-orange-500"></i>
+                            <span class="text-xs text-gray-400">Heure</span>
+                        </div>
+                        <p class="font-bold"><?php echo $reservation['reservation_time']; ?></p>
+                    </div>
+                    
+                    <div class="bg-gray-800/30 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-users text-orange-500"></i>
+                            <span class="text-xs text-gray-400">Places</span>
+                        </div>
+                        <p class="font-bold"><?php echo $reservation['number_tickets']; ?> place<?php echo $reservation['number_tickets'] > 1 ? 's' : ''; ?></p>
+                    </div>
+                    
+                    <div class="bg-gray-800/30 rounded-lg p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-euro-sign text-orange-500"></i>
+                            <span class="text-xs text-gray-400">Prix</span>
+                        </div>
+                        <p class="font-bold text-green-500"><?php echo number_format($reservation['total_price'], 2); ?>€</p>
+                    </div>
+                </div>
+                
+                <!-- Actions - CORRIGÉ -->
+                <?php if ($is_upcoming): ?>
+                    <div class="flex gap-3">
+                        <button onclick="showQRCode('<?php echo htmlspecialchars($reservation['reservation_code']); ?>')" 
+                                style="background: linear-gradient(135deg, #7800ff 0%, #5500cc 100%);"
+                                class="flex-1 px-4 py-2 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                            <i class="fas fa-qrcode"></i>
+                            QR Code
+                        </button>
+                        
+                        <button onclick="confirmCancel(<?php echo $reservation['reservation_id']; ?>, '<?php echo addslashes($reservation['film_title']); ?>')" 
+                                class="cancel-btn px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                            <i class="fas fa-times-circle"></i>
+                            Annuler
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <div class="bg-gray-800/30 rounded-lg p-3 text-center text-gray-500">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Séance terminée
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+<?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>

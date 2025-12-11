@@ -1069,28 +1069,50 @@ if ($mysqli->connect_error) {
             selectSession(cinemaId, cinemaName, filmId, filmTitle, session);
         }
         
-        function selectSession(cinemaId, cinemaName, filmId, filmTitle, session) {
-            selectedReservation = {
-                cinema_id: cinemaId,
-                cinema_name: cinemaName,
-                film_id: filmId,
-                film_title: filmTitle,
-                session: session
-            };
-            
-            document.getElementById('displayCinemaName').value = cinemaName;
-            document.getElementById('displayFilmTitle').value = filmTitle;
-            document.getElementById('displaySession').value = session;
-            
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('resDate').value = tomorrow.toISOString().split('T')[0];
-            
-            updatePrice();
-            
-            closeFilmsModal();
-            document.getElementById('reservationModal').style.display = 'flex';
+       function selectSession(cinemaId, cinemaName, filmId, filmTitle, session) {
+    // Trouver le film correspondant dans les données
+    let filmPoster = '';
+    let cinemaAddress = '';
+    
+    // Chercher dans tous les cinémas
+    for (let cinema of cinemas) {
+        // Trouver le film dans ce cinéma
+        for (let film of cinema.films) {
+            if (film.id == filmId) {
+                filmPoster = film.poster;
+                break;
+            }
         }
+        // Trouver l'adresse du cinéma
+        if (cinema.original_id == cinemaId) {
+            cinemaAddress = cinema.address + ', ' + cinema.city + ' ' + cinema.postcode;
+        }
+        if (filmPoster && cinemaAddress) break;
+    }
+    
+    selectedReservation = {
+        cinema_id: cinemaId,
+        cinema_name: cinemaName,
+        film_id: filmId,
+        film_title: filmTitle,
+        session: session,
+        film_poster: filmPoster, // Ajouter le poster
+        cinema_address: cinemaAddress // Ajouter l'adresse
+    };
+    
+    document.getElementById('displayCinemaName').value = cinemaName;
+    document.getElementById('displayFilmTitle').value = filmTitle;
+    document.getElementById('displaySession').value = session;
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('resDate').value = tomorrow.toISOString().split('T')[0];
+    
+    updatePrice();
+    
+    closeFilmsModal();
+    document.getElementById('reservationModal').style.display = 'flex';
+}
         
         function closeReservationModal() {
             document.getElementById('reservationModal').style.display = 'none';
@@ -1103,32 +1125,33 @@ if ($mysqli->connect_error) {
         }
         
         function confirmReservation() {
-            const data = {
-                cinema_id: selectedReservation.cinema_id,
-                cinema_name: selectedReservation.cinema_name,
-                cinema_address: '',
-                film_id: selectedReservation.film_id,
-                film_title: selectedReservation.film_title,
-                film_poster: '',
-                reservation_date: document.getElementById('resDate').value,
-                reservation_time: selectedReservation.session,
-                number_tickets: document.getElementById('resTickets').value,
-                total_price: document.getElementById('totalPrice').textContent
-            };
-            
-            const formData = new FormData();
-            Object.keys(data).forEach(key => formData.append(key, data[key]));
-            
-            fetch('../api/reserve_cinema.php', {
-                method: 'POST',
-                body: formData
-            })
+    const data = {
+        cinema_id: selectedReservation.cinema_id,
+        cinema_name: selectedReservation.cinema_name,
+        cinema_address: selectedReservation.cinema_address,
+        film_id: selectedReservation.film_id,
+        film_title: selectedReservation.film_title,
+        film_poster: selectedReservation.film_poster, // Poster maintenant inclus
+        reservation_date: document.getElementById('resDate').value,
+        reservation_time: selectedReservation.session,
+        number_tickets: document.getElementById('resTickets').value,
+        total_price: document.getElementById('totalPrice').textContent
+    };
+    
+    const formData = new FormData();
+    Object.keys(data).forEach(key => formData.append(key, data[key]));
+    
+    fetch('../api/reserve_cinema.php', {
+        method: 'POST',
+        body: formData
+    })
             .then(r => r.json())
             .then(result => {
                 if (result.success) {
                     alert('✅ Réservation confirmée!\n\nCode de réservation: ' + result.reservation_code + '\n\nVous pouvez retrouver votre réservation dans votre espace personnel.');
                     closeReservationModal();
-                    setTimeout(() => window.location.href = '../user/reservations.php', 1500);
+                    setTimeout(() => window.location.href = 'user/reservations.php', 1500);
+
                 } else {
                     alert('❌ Erreur: ' + result.message);
                 }
