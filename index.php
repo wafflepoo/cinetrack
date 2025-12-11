@@ -18,7 +18,8 @@ function fetchTrendingMovies() {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
+
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -45,7 +46,7 @@ function fetchGenresFromAPI() {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -72,7 +73,7 @@ function fetchTVGenresFromAPI() {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -98,7 +99,7 @@ function fetchMovieCountByGenre($genre_id) {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -124,7 +125,7 @@ function fetchSeriesCountByGenre($genre_id) {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -155,7 +156,7 @@ function fetchGenreImageFromAPI($genre_id, $type = 'movie') {
     
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    
     
     if ($http_code === 200 && $response) {
         $data = json_decode($response, true);
@@ -399,6 +400,7 @@ $features = [
     <link rel="stylesheet" href="css/animations.css">
 </head>
 <body class="gradient-bg text-white">
+
     
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/hero.php'; ?>
