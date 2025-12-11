@@ -80,7 +80,7 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                 </a>
                 <a href="<?= $base_path ?>pages/user/lists.php" class="block text-gray-200 hover:text-white text-lg">
                     <i class="fas fa-list text-teal-500 mr-2"></i>
-                    Lists
+                    Listes
                 </a>
                 <a href="<?= $base_path ?>pages/user/reviews.php" class="block text-gray-200 hover:text-white text-lg">
                     <i class="fas fa-star text-yellow-400 mr-2"></i>

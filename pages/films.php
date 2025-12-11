@@ -1000,7 +1000,7 @@ $current_year = date('Y');
             </div>
         </section>
     </main>
-
+<?php include '../includes/footer.php'; ?>
     <script>
     // Recherche en temps réel avec AJAX
     let searchTimeout;
