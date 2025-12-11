@@ -19,8 +19,6 @@ $is_in_user  = str_contains($current_file, "/user/");
 $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 ?>
 
-<!-- FAVICON -->
-<link rel="icon" type="image/png" href="<?= $base_path ?>images/favicon.png">
 
 <!-- OVERLAY -->
 <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden z-[9000]"></div>
