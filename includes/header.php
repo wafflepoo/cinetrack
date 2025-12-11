@@ -77,11 +77,7 @@ if ($is_in_user) {
         <i class="fas fa-film mr-1"></i> Cinémas
     </a>
                         
-    <a href="pages/scene-search.php" class="nav-link flex items-center gap-2">
-        <i class="fas fa-camera-movie"></i>
-        Shazam Cinéma
-    </a>
-
+  
                   
                         <?php if ($isLoggedIn): ?>
                             <a href="<?php echo $base_path; ?>pages/user/dashboard.php" class="nav-link">
