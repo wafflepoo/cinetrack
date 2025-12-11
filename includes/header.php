@@ -48,26 +48,56 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                 Accueil
             </a>
 
-            <!-- Always visible -->
-            <a href="<?= $base_path ?>pages/films.php" class="block text-gray-200 hover:text-white text-lg">Films</a>
-            <a href="<?= $base_path ?>pages/series.php" class="block text-gray-200 hover:text-white text-lg">Séries</a>
-            <a href="<?= $base_path ?>pages/cinemas.php" class="block text-gray-200 hover:text-white text-lg">Cinémas</a>
+            <?php if ($isLoggedIn): ?>
+                <!-- MENU SIMPLIFIÉ : Seulement ces liens -->
+                <a href="<?= $base_path ?>pages/user/dashboard.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-chart-line text-blue-500 mr-2"></i>
+                    Dashboard
+                </a>
+            <?php endif; ?>
+
+            <!-- Toujours visibles -->
+            <a href="<?= $base_path ?>pages/films.php" class="block text-gray-200 hover:text-white text-lg">
+                <i class="fas fa-film text-orange-500 mr-2"></i>
+                Films
+            </a>
+            <a href="<?= $base_path ?>pages/series.php" class="block text-gray-200 hover:text-white text-lg">
+                <i class="fas fa-tv text-purple-500 mr-2"></i>
+                Séries
+            </a>
+            <a href="<?= $base_path ?>pages/cinemas.php" class="block text-gray-200 hover:text-white text-lg">
+                <i class="fas fa-ticket-alt text-green-500 mr-2"></i>
+                Cinémas
+            </a>
 
             <?php if ($isLoggedIn): ?>
-                <a href="<?= $base_path ?>pages/user/dashboard.php" class="block text-gray-200 hover:text-white text-lg">Dashboard</a>
-                <a href="<?= $base_path ?>pages/user/watchlist.php" class="block text-gray-200 hover:text-white text-lg">Watchlist</a>
-                <a href="<?= $base_path ?>pages/user/reviews.php" class="block text-gray-200 hover:text-white text-lg">Critiques</a>
-                <a href="<?= $base_path ?>pages/user/lists.php" class="block text-gray-200 hover:text-white text-lg">Listes</a>
-                <a href="<?= $base_path ?>pages/user/recommendations.php" class="block text-gray-200 hover:text-white text-lg">Recommandations</a>
-                <a href="<?= $base_path ?>pages/user/reservations.php" class="block text-gray-200 hover:text-white text-lg flex items-center gap-2">
-                    <i class="fas fa-ticket-alt text-orange-500"></i>
-                    Réservations
-                </a>
-
                 <hr class="border-gray-700 my-4">
 
-                <a href="<?= $base_path ?>pages/user/profile.php" class="block text-gray-200 hover:text-white text-lg">Mon Profil</a>
-                <a href="<?= $base_path ?>pages/logout.php" class="block text-red-400 hover:text-red-300 text-lg font-semibold">Déconnexion</a>
+                <!-- Liens secondaires dans le menu mobile seulement -->
+                <a href="<?= $base_path ?>pages/user/watchlist.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-bookmark text-yellow-500 mr-2"></i>
+                    Watchlist
+                </a>
+                <a href="<?= $base_path ?>pages/user/lists.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-list text-teal-500 mr-2"></i>
+                    Lists
+                </a>
+                <a href="<?= $base_path ?>pages/user/reviews.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-star text-yellow-400 mr-2"></i>
+                    Critiques
+                </a>
+                <a href="<?= $base_path ?>pages/user/reservations.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-receipt text-orange-500 mr-2"></i>
+                    Réservations
+                </a>
+                <a href="<?= $base_path ?>pages/user/profile.php" class="block text-gray-200 hover:text-white text-lg">
+                    <i class="fas fa-user text-blue-400 mr-2"></i>
+                    Mon Profil
+                </a>
+                <a href="<?= $base_path ?>pages/logout.php" class="block text-red-400 hover:text-red-300 text-lg font-semibold">
+                    <i class="fas fa-sign-out-alt mr-2"></i>
+                    Déconnexion
+                </a>
 
             <?php else: ?>
 
@@ -104,31 +134,40 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                     <span class="text-2xl font-black">CineTrack</span>
                 </a>
 
-                <!-- DESKTOP NAV -->
+                <!-- DESKTOP NAV - MENU SIMPLIFIÉ -->
                 <div class="hidden md:flex items-center space-x-6">
 
                     <a href="<?= $base_path ?>index.php"
                        class="nav-link <?= basename($current_file)=='index.php'?'active':'' ?>">
+                        <i class="fas fa-home mr-1"></i>
                         Accueil
                     </a>
 
-                    <!-- ALWAYS SHOW THESE -->
-                    <a href="<?= $base_path ?>pages/films.php" class="nav-link">Films</a>
-                    <a href="<?= $base_path ?>pages/series.php" class="nav-link">Séries</a>
-                    <a href="<?= $base_path ?>pages/cinemas.php" class="nav-link">Cinémas</a>
-
-                    <!-- EXTRA LINKS FOR LOGGED IN USERS -->
                     <?php if ($isLoggedIn): ?>
-                        <a href="<?= $base_path ?>pages/user/dashboard.php" class="nav-link">Dashboard</a>
-                        <a href="<?= $base_path ?>pages/user/watchlist.php" class="nav-link">Watchlist</a>
-                        <a href="<?= $base_path ?>pages/user/reviews.php" class="nav-link">Critiques</a>
-                        <a href="<?= $base_path ?>pages/user/lists.php" class="nav-link">Listes</a>
-                        <a href="<?= $base_path ?>pages/user/recommendations.php" class="nav-link">Recommandations</a>
-                        <a href="<?= $base_path ?>pages/user/reservations.php" class="nav-link flex items-center gap-1">
-                            <i class="fas fa-ticket-alt"></i>
-                            Réservations
+                        <!-- UNIQUEMENT DASHBOARD pour utilisateur connecté -->
+                        <a href="<?= $base_path ?>pages/user/dashboard.php" 
+                           class="nav-link <?= str_contains($current_file, 'dashboard.php')?'active':'' ?>">
+                            <i class="fas fa-chart-line mr-1"></i>
+                            Dashboard
                         </a>
                     <?php endif; ?>
+
+                    <!-- TOUJOURS VISIBLES -->
+                    <a href="<?= $base_path ?>pages/films.php" 
+                       class="nav-link <?= str_contains($current_file, 'films.php')?'active':'' ?>">
+                        <i class="fas fa-film mr-1"></i>
+                        Films
+                    </a>
+                    <a href="<?= $base_path ?>pages/series.php" 
+                       class="nav-link <?= str_contains($current_file, 'series.php')?'active':'' ?>">
+                        <i class="fas fa-tv mr-1"></i>
+                        Séries
+                    </a>
+                    <a href="<?= $base_path ?>pages/cinemas.php" 
+                       class="nav-link <?= str_contains($current_file, 'cinemas.php')?'active':'' ?>">
+                        <i class="fas fa-ticket-alt mr-1"></i>
+                        Cinémas
+                    </a>
 
                 </div>
             </div>
@@ -154,7 +193,7 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 
                 <?php else: ?>
 
-                    <!-- AVATAR DROPDOWN -->
+                    <!-- AVATAR DROPDOWN avec accès rapide -->
                     <div class="relative group hidden md:block">
 
                         <button class="flex items-center space-x-3 bg-gray-800/50 hover:bg-gray-700/60
@@ -177,8 +216,33 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 
                             <a href="<?= $base_path ?>pages/user/profile.php"
                                class="flex items-center px-4 py-3 text-gray-200 hover:bg-gray-800 transition">
-                                <i class="fas fa-user-circle mr-3 text-orange-400"></i>
-                                <span>Gérer mon profil</span>
+                                <i class="fas fa-user-circle mr-3 text-blue-400"></i>
+                                <span>Mon Profil</span>
+                            </a>
+
+                            <!-- Liens secondaires dans le dropdown seulement -->
+                            <a href="<?= $base_path ?>pages/user/watchlist.php"
+                               class="flex items-center px-4 py-3 text-gray-200 hover:bg-gray-800 transition">
+                                <i class="fas fa-bookmark mr-3 text-yellow-500"></i>
+                                <span>Watchlist</span>
+                            </a>
+
+                            <a href="<?= $base_path ?>pages/user/lists.php"
+                               class="flex items-center px-4 py-3 text-gray-200 hover:bg-gray-800 transition">
+                                <i class="fas fa-list mr-3 text-teal-500"></i>
+                                <span>Lists</span>
+                            </a>
+
+                            <a href="<?= $base_path ?>pages/user/reviews.php"
+                               class="flex items-center px-4 py-3 text-gray-200 hover:bg-gray-800 transition">
+                                <i class="fas fa-star mr-3 text-yellow-400"></i>
+                                <span>Critiques</span>
+                            </a>
+
+                            <a href="<?= $base_path ?>pages/user/reservations.php"
+                               class="flex items-center px-4 py-3 text-gray-200 hover:bg-gray-800 transition">
+                                <i class="fas fa-ticket-alt mr-3 text-orange-500"></i>
+                                <span>Réservations</span>
                             </a>
 
                             <div class="border-t border-gray-700 my-1"></div>
@@ -224,6 +288,8 @@ closeBtn.onclick = overlay.onclick = () => {
     color: #c5c9d2;
     transition: all 0.25s ease;
     font-size: 1.05rem;
+    display: flex;
+    align-items: center;
 }
 
 .nav-link::after {
@@ -251,5 +317,11 @@ closeBtn.onclick = overlay.onclick = () => {
 }
 .nav-link.active::after {
     width: 100%;
+}
+
+/* Style pour les icônes dans le menu */
+.nav-link i {
+    width: 20px;
+    text-align: center;
 }
 </style>
