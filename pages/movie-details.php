@@ -94,9 +94,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
         $comment = trim($_POST['comment']);
         
         // Validate rating
-        if ($rating < 0 || $rating > 10) {
-            $_SESSION['error'] = 'La note doit être entre 0 et 10.';
-        } else {
+        if ($rating < 1 || $rating > 5) {
+            $_SESSION['error'] = 'La note doit être entre 1 et 5.';
+        }
+        else {
             try {
                 // First, ensure the movie exists in FILM table
                 $check_film = "SELECT id_film FROM FILM WHERE id_film = ?";
@@ -190,6 +191,19 @@ if (!empty($movie['backdrop_path'])) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        .star {
+            cursor: pointer;
+            font-size: 2rem;
+            color: #555;
+            transition: color .2s;
+        }
+        .star.active {
+            color: #ffd700;
+        }
+        .star:hover {
+            color: #ffd700;
+        }
+
         .movie-hero {
             <?php if ($backdrop_url !== 'none'): ?>
             background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%), 
@@ -365,22 +379,7 @@ if (!empty($movie['backdrop_path'])) {
     <?php endif; ?>
 </div>
 
-<!-- Debug trailer info (temporary - remove after testing) -->
-<div class="mt-4 p-4 bg-yellow-500/20 rounded-lg border border-yellow-500/50">
-    <h4 class="font-bold mb-2 text-yellow-400">Debug Trailer Info:</h4>
-    <p class="text-sm">Movie ID: <?php echo $movie_id; ?></p>
-    <p class="text-sm">Trailer Key: <?php echo $trailer_key ? $trailer_key : 'NULL'; ?></p>
-    <p class="text-sm">Videos Available: <?php echo isset($movie['videos']['results']) ? count($movie['videos']['results']) : '0'; ?></p>
-    <?php if (isset($movie['videos']['results'])): ?>
-        <div class="mt-2">
-            <p class="text-sm font-semibold">Available Videos:</p>
-            <?php foreach ($movie['videos']['results'] as $video): ?>
-                <p class="text-xs">- <?php echo $video['type']; ?> (<?php echo $video['site']; ?>): <?php echo $video['key']; ?></p>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
-                        
+
                         <!-- Synopsis -->
                         <div class="mb-6">
                             <h3 class="text-xl font-bold mb-3">Synopsis</h3>
@@ -431,14 +430,21 @@ if (!empty($movie['backdrop_path'])) {
                         <h3 class="text-xl font-bold mb-4">Donnez votre avis</h3>
                         <form method="POST">
                             <div class="mb-4">
-                                <label class="block text-sm font-medium mb-2">Note (0-10)</label>
-                                <div class="flex items-center gap-4">
-                                    <input type="range" name="rating" id="ratingSlider" 
-                                           min="0" max="10" step="0.5" value="5" 
-                                           class="w-full accent-orange-500"
-                                           oninput="updateRatingValue(this.value)">
-                                    <span id="ratingDisplay" class="text-lg font-bold text-orange-500 min-w-12">5.0</span>
-                                </div>
+                              <div class="mb-4">
+    <label class="block text-sm font-medium mb-2">Note (1 à 5)</label>
+
+    <div class="star-rating" id="starRating">
+        <i class="fas fa-star star" data-value="1"></i>
+        <i class="fas fa-star star" data-value="2"></i>
+        <i class="fas fa-star star" data-value="3"></i>
+        <i class="fas fa-star star" data-value="4"></i>
+        <i class="fas fa-star star" data-value="5"></i>
+    </div>
+
+    <!-- Hidden input sent to PHP -->
+    <input type="hidden" name="rating" id="ratingValue" value="0">
+</div>
+
                             </div>
                             
                             <div class="mb-4">
@@ -490,7 +496,10 @@ if (!empty($movie['backdrop_path'])) {
                                                 <span>•</span>
                                                 <div class="flex items-center gap-1">
                                                     <i class="fas fa-star text-yellow-400 text-xs"></i>
-                                                    <span class="font-semibold"><?php echo number_format($review['note'], 1); ?>/10</span>
+                                                   <?php for ($i = 1; $i <= 5; $i++): ?>
+    <i class="fas fa-star <?= $i <= $review['note'] ? 'text-yellow-400' : 'text-gray-600' ?>"></i>
+<?php endfor; ?>
+
                                                 </div>
                                             </div>
                                         </div>
@@ -645,6 +654,19 @@ if (!empty($movie['backdrop_path'])) {
             }, 300);
         }, 3000);
     }
+    // ⭐ STAR RATING SCRIPT
+    document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', () => {
+            let rating = star.getAttribute('data-value');
+            document.getElementById('ratingValue').value = rating;
+
+            // Highlight stars
+            document.querySelectorAll('.star').forEach(s => {
+                s.classList.toggle('active', s.getAttribute('data-value') <= rating);
+            });
+        });
+    });
+
     </script>
 </body>
 </html>
