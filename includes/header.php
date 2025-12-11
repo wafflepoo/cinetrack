@@ -19,6 +19,8 @@ $is_in_user  = str_contains($current_file, "/user/");
 $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 ?>
 
+<!-- FAVICON -->
+<link rel="icon" type="image/x-icon" href="<?= $base_path ?>images/favicon.ico">
 
 <!-- OVERLAY -->
 <div id="overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden z-[9000]"></div>
@@ -39,12 +41,17 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 
         <h2 class="text-2xl font-bold mb-8">Menu</h2>
 
-        <!-- MENU -->
+        <!-- MOBILE MENU -->
         <nav class="space-y-4">
 
             <a href="<?= $base_path ?>index.php" class="block text-gray-200 hover:text-white text-lg">
                 Accueil
             </a>
+
+            <!-- Always visible -->
+            <a href="<?= $base_path ?>pages/films.php" class="block text-gray-200 hover:text-white text-lg">Films</a>
+            <a href="<?= $base_path ?>pages/series.php" class="block text-gray-200 hover:text-white text-lg">Séries</a>
+            <a href="<?= $base_path ?>pages/cinemas.php" class="block text-gray-200 hover:text-white text-lg">Cinémas</a>
 
             <?php if ($isLoggedIn): ?>
                 <a href="<?= $base_path ?>pages/user/dashboard.php" class="block text-gray-200 hover:text-white text-lg">Dashboard</a>
@@ -59,13 +66,9 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                 <a href="<?= $base_path ?>pages/logout.php" class="block text-red-400 hover:text-red-300 text-lg font-semibold">Déconnexion</a>
 
             <?php else: ?>
-                <a href="<?= $base_path ?>pages/films.php" class="block text-gray-200 hover:text-white text-lg">Films</a>
-                <a href="<?= $base_path ?>pages/series.php" class="block text-gray-200 hover:text-white text-lg">Séries</a>
-                <a href="<?= $base_path ?>pages/cinemas.php" class="block text-gray-200 hover:text-white text-lg">Cinémas</a>
 
                 <hr class="border-gray-700 my-4">
 
-                <!-- LOGIN / SIGNUP MOBILE -->
                 <a href="<?= $base_path ?>pages/connexion.php"
                    class="block bg-gray-800 px-4 py-2 rounded-lg text-center hover:bg-gray-700">
                     Connexion
@@ -74,12 +77,12 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                    class="block bg-orange-500 px-4 py-2 rounded-lg text-center hover:bg-orange-600">
                     S'inscrire
                 </a>
+
             <?php endif; ?>
 
         </nav>
     </div>
 </div>
-
 
 <!-- =======================================================
      DESKTOP HEADER
@@ -102,20 +105,21 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 
                     <a href="<?= $base_path ?>index.php"
                        class="nav-link <?= basename($current_file)=='index.php'?'active':'' ?>">
-                       Accueil
+                        Accueil
                     </a>
 
+                    <!-- ALWAYS SHOW THESE -->
+                    <a href="<?= $base_path ?>pages/films.php" class="nav-link">Films</a>
+                    <a href="<?= $base_path ?>pages/series.php" class="nav-link">Séries</a>
+                    <a href="<?= $base_path ?>pages/cinemas.php" class="nav-link">Cinémas</a>
+
+                    <!-- EXTRA LINKS FOR LOGGED IN USERS -->
                     <?php if ($isLoggedIn): ?>
                         <a href="<?= $base_path ?>pages/user/dashboard.php" class="nav-link">Dashboard</a>
                         <a href="<?= $base_path ?>pages/user/watchlist.php" class="nav-link">Watchlist</a>
                         <a href="<?= $base_path ?>pages/user/reviews.php" class="nav-link">Critiques</a>
                         <a href="<?= $base_path ?>pages/user/lists.php" class="nav-link">Listes</a>
                         <a href="<?= $base_path ?>pages/user/recommendations.php" class="nav-link">Recommandations</a>
-
-                    <?php else: ?>
-                        <a href="<?= $base_path ?>pages/films.php" class="nav-link">Films</a>
-                        <a href="<?= $base_path ?>pages/series.php" class="nav-link">Séries</a>
-                        <a href="<?= $base_path ?>pages/cinemas.php" class="nav-link">Cinémas</a>
                     <?php endif; ?>
 
                 </div>
@@ -142,7 +146,7 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
 
                 <?php else: ?>
 
-                    <!-- AVATAR DROPDOWN (unchanged) -->
+                    <!-- AVATAR DROPDOWN -->
                     <div class="relative group hidden md:block">
 
                         <button class="flex items-center space-x-3 bg-gray-800/50 hover:bg-gray-700/60
@@ -186,7 +190,6 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
         </div>
     </nav>
 </header>
-
 
 <!-- MOBILE MENU SCRIPT -->
 <script>
