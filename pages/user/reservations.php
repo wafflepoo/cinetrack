@@ -1,868 +1,461 @@
 <?php
-// user/reservations.php - Gestion des réservations utilisateur
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
+// pages/user/reservations.php
 session_start();
-include '../../includes/config.conf.php';
+require_once '../../includes/config.conf.php';
+require_once '../../includes/auth.php';
 
-// Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../auth/login.php');
-    exit();
-}
+requireLogin();
+$user = getCurrentUser();
 
-$user_id = $_SESSION['user_id'];
-
-// Récupérer les réservations de l'utilisateur
-$reservations = [];
-$query = "SELECT * FROM cinema_reservations WHERE user_id = ? ORDER BY reservation_date DESC, reservation_time DESC";
+// Récupérer toutes les réservations de l'utilisateur
+$query = "SELECT * FROM cinema_reservations 
+          WHERE user_id = ? 
+          ORDER BY reservation_date DESC, reservation_time DESC";
 $stmt = $mysqli->prepare($query);
-$stmt->bind_param('i', $user_id);
+$stmt->bind_param("i", $user['id']);
 $stmt->execute();
 $result = $stmt->get_result();
 
+$reservations = [];
 while ($row = $result->fetch_assoc()) {
     $reservations[] = $row;
 }
 $stmt->close();
 
-// Annuler une réservation
+// Statistiques
+$total_reservations = count($reservations);
+$upcoming_count = 0;
+$past_count = 0;
+$total_spent = 0;
+
+$today = date('Y-m-d');
+foreach ($reservations as $reservation) {
+    if ($reservation['reservation_date'] >= $today) {
+        $upcoming_count++;
+    } else {
+        $past_count++;
+    }
+    $total_spent += $reservation['total_price'];
+}
+
+// Gestion de l'annulation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])) {
     $reservation_id = intval($_POST['reservation_id']);
     
-    $update_query = "UPDATE cinema_reservations SET reservation_status = 'cancelled' WHERE reservation_id = ? AND user_id = ?";
-    $update_stmt = $mysqli->prepare($update_query);
-    $update_stmt->bind_param('ii', $reservation_id, $user_id);
+    // Vérifier que la réservation appartient bien à l'utilisateur
+    $delete_query = "DELETE FROM cinema_reservations 
+                     WHERE id = ? AND user_id = ? AND reservation_date >= ?";
+    $delete_stmt = $mysqli->prepare($delete_query);
+    $delete_stmt->bind_param("iis", $reservation_id, $user['id'], $today);
     
-    if ($update_stmt->execute()) {
-        $success_message = "✅ Réservation annulée avec succès !";
-        // Rafraîchir les réservations
-        header("Location: reservations.php?success=1");
-        exit();
+    if ($delete_stmt->execute()) {
+        $_SESSION['success_message'] = "Réservation annulée avec succès!";
     } else {
-        $error_message = "❌ Erreur lors de l'annulation.";
+        $_SESSION['error_message'] = "Erreur lors de l'annulation.";
     }
-    $update_stmt->close();
+    $delete_stmt->close();
+    
+    header("Location: reservations.php");
+    exit;
 }
-
-$total_reservations = count($reservations);
-$active_reservations = count(array_filter($reservations, function($r) {
-    return $r['reservation_status'] === 'confirmed' && 
-           strtotime($r['reservation_date'] . ' ' . $r['reservation_time']) >= time();
-}));
-$total_spent = array_sum(array_column($reservations, 'total_price'));
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎟️ Mes Réservations - CineTrack</title>
+    <title>Mes Réservations - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/animations.css">
     
     <style>
-        /* Hero avec le thème orange/violet */
-        .reservations-hero {
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.1) 0%, rgba(120, 0, 255, 0.1) 100%);
-            padding: 120px 0 60px;
-            position: relative;
-            overflow: hidden;
+        .gradient-bg {
+            background: linear-gradient(135deg, #0a0e14 0%, #05080d 100%);
         }
         
-        .reservations-hero::before {
-            content: '';
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(255, 140, 0, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(120, 0, 255, 0.2) 0%, transparent 50%);
-            animation: rotate 20s linear infinite;
-        }
-        
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .mega-title {
-            font-size: clamp(3rem, 10vw, 8rem);
-            font-weight: 900;
-            letter-spacing: -0.05em;
-            margin-bottom: 2rem;
-            background: linear-gradient(135deg, #ff8c00 0%, #7800ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: float 6s ease-in-out infinite;
-            position: relative;
-            z-index: 10;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        .mega-subtitle {
-            font-size: clamp(1.2rem, 3vw, 2rem);
-            color: #9ca3af;
-            margin-bottom: 3rem;
-            animation: fadeInUp 1s ease forwards 0.5s;
-            opacity: 0;
-            position: relative;
-            z-index: 10;
-        }
-        
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-        }
-        
-        /* Statistiques */
         .stat-card {
-            background: rgba(30, 30, 40, 0.4);
+            background: linear-gradient(135deg, rgba(30, 30, 45, 0.6) 0%, rgba(18, 18, 28, 0.8) 100%);
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 140, 0, 0.2);
-            border-radius: 25px;
-            padding: 2rem;
-            transition: all 0.4s;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
         }
         
         .stat-card:hover {
-            border-color: rgba(255, 140, 0, 0.5);
-            transform: translateY(-10px);
-            box-shadow: 0 20px 50px rgba(255, 140, 0, 0.2);
+            transform: translateY(-5px);
+            border-color: rgba(255, 140, 0, 0.3);
+            box-shadow: 0 15px 40px rgba(255, 140, 0, 0.15);
         }
         
-        .stat-number {
-            font-size: 3.5rem;
-            font-weight: 900;
-            background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            line-height: 1;
-        }
-        
-        .stat-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.2) 0%, rgba(120, 0, 255, 0.2) 100%);
-        }
-        
-        /* Carte de réservation */
         .reservation-card {
             background: rgba(30, 30, 40, 0.5);
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 140, 0, 0.2);
-            border-radius: 25px;
-            overflow: hidden;
-            transition: all 0.4s;
-            height: 100%;
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            transition: all 0.3s ease;
         }
         
         .reservation-card:hover {
             border-color: rgba(255, 140, 0, 0.5);
-            transform: translateY(-5px);
-            box-shadow: 0 20px 50px rgba(255, 140, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.2);
+            transform: translateY(-3px);
         }
         
-        .reservation-header {
-            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .upcoming-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
         
-        .reservation-code {
-            font-family: 'Courier New', monospace;
-            font-size: 1.3rem;
-            font-weight: 900;
-            letter-spacing: 2px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.5rem 1rem;
-            border-radius: 12px;
+        .past-badge {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
         }
         
-        .status-badge {
-            padding: 0.5rem 1.2rem;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 0.9rem;
+        .cancel-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            transition: all 0.3s ease;
         }
         
-        .status-confirmed {
-            background: rgba(34, 197, 94, 0.2);
-            color: #10b981;
-            border: 2px solid rgba(34, 197, 94, 0.3);
-        }
-        
-        .status-cancelled {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 2px solid rgba(239, 68, 68, 0.3);
-        }
-        
-        .status-completed {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 2px solid rgba(59, 130, 246, 0.3);
-        }
-        
-        .reservation-content {
-            padding: 2rem;
-        }
-        
-        .film-poster-container {
-            position: relative;
-            border-radius: 15px;
-            overflow: hidden;
-            height: 300px;
-            margin-bottom: 1.5rem;
+        .cancel-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
         }
         
         .film-poster {
-            width: 100%;
-            height: 100%;
+            width: 120px;
+            height: 180px;
             object-fit: cover;
-        }
-        
-        .film-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 1.5rem;
-            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.95) 100%);
-        }
-        
-        .film-title {
-            font-size: 1.8rem;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 0.5rem;
-        }
-        
-        .reservation-details {
-            margin: 1.5rem 0;
-        }
-        
-        .detail-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding: 0.8rem;
-            background: rgba(255, 140, 0, 0.05);
-            border-radius: 12px;
-        }
-        
-        .detail-icon {
-            width: 40px;
-            height: 40px;
             border-radius: 10px;
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.2) 0%, rgba(120, 0, 255, 0.2) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ff8c00;
         }
         
-        .price-tag {
-            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
-            padding: 1rem 1.5rem;
-            border-radius: 15px;
-            font-size: 1.8rem;
-            font-weight: 900;
-            text-align: center;
-            margin-top: 1rem;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-        
-        .btn-ticket {
-            flex: 1;
-            padding: 1rem;
-            border: none;
-            border-radius: 15px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        
-        .btn-print {
-            background: rgba(59, 130, 246, 0.2);
-            color: #3b82f6;
-            border: 2px solid rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-print:hover {
-            background: rgba(59, 130, 246, 0.4);
-            transform: scale(1.05);
-        }
-        
-        .btn-cancel {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 2px solid rgba(239, 68, 68, 0.3);
-        }
-        
-        .btn-cancel:hover {
-            background: rgba(239, 68, 68, 0.4);
-            transform: scale(1.05);
-        }
-        
-        .btn-disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .btn-disabled:hover {
-            transform: none !important;
-        }
-        
-        /* Modal d'annulation */
-        .cancel-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .cancel-modal-content {
-            background: rgba(30, 30, 40, 0.95);
-            border: 3px solid rgba(239, 68, 68, 0.3);
-            border-radius: 30px;
-            padding: 3rem;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
-        
-        .warning-icon {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.4) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2rem;
-            color: #ef4444;
-            font-size: 3rem;
-        }
-        
-        /* Empty state */
         .empty-state {
-            text-align: center;
-            padding: 6rem 2rem;
-        }
-        
-        .empty-icon {
-            width: 150px;
-            height: 150px;
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.1) 0%, rgba(120, 0, 255, 0.1) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 2rem;
-            color: #ff8c00;
-            font-size: 4rem;
-        }
-        
-        .section-title {
-            font-size: clamp(2rem, 5vw, 4rem);
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #ff8c00 0%, #7800ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* Filtres */
-        .filter-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 3rem;
-        }
-        
-        .filter-btn {
-            padding: 1rem 2rem;
-            border: 2px solid rgba(255, 140, 0, 0.3);
-            background: rgba(30, 30, 40, 0.5);
-            border-radius: 50px;
-            color: #9ca3af;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .filter-btn:hover,
-        .filter-btn.active {
-            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
-            color: white;
-            border-color: transparent;
-        }
-        
-        @media (max-width: 768px) {
-            .stat-card {
-                padding: 1.5rem;
-            }
-            
-            .stat-number {
-                font-size: 2.5rem;
-            }
-            
-            .reservation-header {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
+            background: rgba(30, 30, 40, 0.3);
+            border: 2px dashed rgba(255, 140, 0, 0.3);
         }
     </style>
 </head>
-<body class="gradient-bg text-white">
-    <?php include '../includes/header.php'; ?>
+
+<body class="gradient-bg text-white min-h-screen">
+    <?php include '../../includes/header.php'; ?>
     
-    <!-- Hero Section -->
-    <section class="reservations-hero">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <h1 class="mega-title">🎟️ MES RÉSERVATIONS</h1>
-            <p class="mega-subtitle">Gérez toutes vos séances de cinéma au même endroit</p>
+    <main class="pt-32 pb-16">
+        <div class="max-w-7xl mx-auto px-6">
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <!-- Carte Statistique 1 -->
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-ticket-alt fa-2x" style="color: #ff8c00;"></i>
-                    </div>
-                    <div class="stat-number"><?php echo $total_reservations; ?></div>
-                    <div style="color: #9ca3af; font-size: 1.1rem;">Réservations totales</div>
+            <!-- Messages -->
+            <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="mb-6 bg-green-500/20 border border-green-500/50 rounded-xl p-4 flex items-center">
+                    <i class="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+                    <span><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></span>
                 </div>
-                
-                <!-- Carte Statistique 2 -->
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-play-circle fa-2x" style="color: #7800ff;"></i>
-                    </div>
-                    <div class="stat-number"><?php echo $active_reservations; ?></div>
-                    <div style="color: #9ca3af; font-size: 1.1rem;">Séances à venir</div>
-                </div>
-                
-                <!-- Carte Statistique 3 -->
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-euro-sign fa-2x" style="color: #10b981;"></i>
-                    </div>
-                    <div class="stat-number"><?php echo number_format($total_spent, 2, ',', ' '); ?>€</div>
-                    <div style="color: #9ca3af; font-size: 1.1rem;">Total dépensé</div>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Filtres -->
-    <section style="padding: 4rem 2rem;">
-        <div class="max-w-7xl mx-auto">
-            <div class="filter-buttons">
-                <button class="filter-btn active" onclick="filterReservations('all')">
-                    <i class="fas fa-list"></i> Toutes
-                </button>
-                <button class="filter-btn" onclick="filterReservations('confirmed')">
-                    <i class="fas fa-check-circle"></i> Confirmées
-                </button>
-                <button class="filter-btn" onclick="filterReservations('upcoming')">
-                    <i class="fas fa-clock"></i> À venir
-                </button>
-                <button class="filter-btn" onclick="filterReservations('cancelled')">
-                    <i class="fas fa-times-circle"></i> Annulées
-                </button>
-                <button class="filter-btn" onclick="filterReservations('completed')">
-                    <i class="fas fa-check-double"></i> Terminées
-                </button>
-            </div>
-            
-            <?php if (isset($success_message)): ?>
-            <div style="background: rgba(34, 197, 94, 0.2); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 15px; padding: 1.5rem; margin-bottom: 2rem; text-align: center;">
-                <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.5rem; margin-right: 0.5rem;"></i>
-                <span style="font-size: 1.1rem; font-weight: 600;"><?php echo $success_message; ?></span>
-            </div>
             <?php endif; ?>
             
-            <?php if (isset($error_message)): ?>
-            <div style="background: rgba(239, 68, 68, 0.2); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 15px; padding: 1.5rem; margin-bottom: 2rem; text-align: center;">
-                <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 1.5rem; margin-right: 0.5rem;"></i>
-                <span style="font-size: 1.1rem; font-weight: 600;"><?php echo $error_message; ?></span>
-            </div>
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="mb-6 bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i>
+                    <span><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></span>
+                </div>
             <?php endif; ?>
             
-            <?php if (empty($reservations)): ?>
-            <!-- Empty State -->
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-film"></i>
-                </div>
-                <h3 class="section-title" style="margin-bottom: 1rem;">Aucune réservation</h3>
-                <p style="color: #9ca3af; font-size: 1.2rem; max-width: 500px; margin: 0 auto 3rem;">
-                    Vous n'avez pas encore réservé de séance de cinéma. Explorez nos cinémas et réservez votre première séance !
+            <!-- Header -->
+            <div class="mb-12">
+                <h1 class="text-5xl font-black mb-4">
+                    <i class="fas fa-ticket-alt text-orange-500 mr-3"></i>
+                    Mes Réservations
+                </h1>
+                <p class="text-xl text-gray-400">
+                    Gérez toutes vos réservations de cinéma en un seul endroit
                 </p>
-                <a href="../pages/cinemas.php" style="display: inline-block; padding: 1.2rem 3rem; background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%); border-radius: 50px; color: white; font-weight: 700; font-size: 1.1rem; text-decoration: none; transition: all 0.3s; box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);">
-                    <i class="fas fa-search"></i> Découvrir les cinémas
+            </div>
+            
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-4xl">
+                            <i class="fas fa-ticket-alt text-orange-500"></i>
+                        </div>
+                        <span class="text-3xl font-black text-orange-500"><?php echo $total_reservations; ?></span>
+                    </div>
+                    <h3 class="text-gray-400 text-sm uppercase tracking-wider">Total</h3>
+                </div>
+                
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-4xl">
+                            <i class="fas fa-calendar-check text-green-500"></i>
+                        </div>
+                        <span class="text-3xl font-black text-green-500"><?php echo $upcoming_count; ?></span>
+                    </div>
+                    <h3 class="text-gray-400 text-sm uppercase tracking-wider">À venir</h3>
+                </div>
+                
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-4xl">
+                            <i class="fas fa-history text-gray-500"></i>
+                        </div>
+                        <span class="text-3xl font-black text-gray-500"><?php echo $past_count; ?></span>
+                    </div>
+                    <h3 class="text-gray-400 text-sm uppercase tracking-wider">Passées</h3>
+                </div>
+                
+                <div class="stat-card p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-4xl">
+                            <i class="fas fa-euro-sign text-purple-500"></i>
+                        </div>
+                        <span class="text-3xl font-black text-purple-500"><?php echo number_format($total_spent, 2); ?>€</span>
+                    </div>
+                    <h3 class="text-gray-400 text-sm uppercase tracking-wider">Dépensé</h3>
+                </div>
+            </div>
+            
+            <!-- Bouton Nouvelle Réservation -->
+            <div class="mb-8 text-center">
+                <a href="../cinemas.php" style="background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg hover:scale-105 transition-transform shadow-lg">
+                    <i class="fas fa-plus-circle"></i>
+                    Nouvelle Réservation
                 </a>
             </div>
-            <?php else: ?>
-            <!-- Grille de réservations -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <?php foreach ($reservations as $reservation): 
-                    $is_upcoming = strtotime($reservation['reservation_date'] . ' ' . $reservation['reservation_time']) >= time();
-                    $can_cancel = $reservation['reservation_status'] === 'confirmed' && $is_upcoming;
-                ?>
-                <div class="reservation-card" data-status="<?php echo $reservation['reservation_status']; ?>" 
-                     data-date="<?php echo $reservation['reservation_date']; ?> <?php echo $reservation['reservation_time']; ?>">
-                    <!-- En-tête -->
-                    <div class="reservation-header">
-                        <div>
-                            <div class="reservation-code"><?php echo htmlspecialchars($reservation['reservation_code']); ?></div>
-                            <div style="font-size: 0.9rem; margin-top: 0.5rem;">
-                                Réservé le <?php echo date('d/m/Y H:i', strtotime($reservation['created_at'])); ?>
-                            </div>
-                        </div>
-                        <div class="status-badge status-<?php echo $reservation['reservation_status']; ?>">
-                            <?php 
-                            $status_text = [
-                                'confirmed' => 'Confirmée',
-                                'cancelled' => 'Annulée',
-                                'completed' => 'Terminée'
-                            ];
-                            echo $status_text[$reservation['reservation_status']];
-                            ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Contenu -->
-                    <div class="reservation-content">
-                        <!-- Film -->
-                        <div class="film-poster-container">
-                            <img src="<?php echo htmlspecialchars($reservation['film_poster'] ?: 'https://via.placeholder.com/400x600'); ?>" 
-                                 alt="<?php echo htmlspecialchars($reservation['film_title']); ?>" 
-                                 class="film-poster">
-                            <div class="film-overlay">
-                                <h3 class="film-title"><?php echo htmlspecialchars($reservation['film_title']); ?></h3>
-                                <div style="display: flex; gap: 1rem; color: #9ca3af; font-size: 0.9rem;">
-                                    <span><i class="fas fa-film"></i> Cinéma</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Détails -->
-                        <div class="reservation-details">
-                            <!-- Cinéma -->
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-building"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 700; font-size: 1.1rem;">
-                                        <?php echo htmlspecialchars($reservation['cinema_name']); ?>
-                                    </div>
-                                    <div style="color: #9ca3af; font-size: 0.9rem;">
-                                        <?php echo htmlspecialchars($reservation['cinema_address']); ?>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Date & Heure -->
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 700; font-size: 1.1rem;">
-                                        <?php echo date('d/m/Y', strtotime($reservation['reservation_date'])); ?>
-                                        à <?php echo $reservation['reservation_time']; ?>
-                                    </div>
-                                    <div style="color: #9ca3af; font-size: 0.9rem;">
-                                        <?php 
-                                        $session_datetime = strtotime($reservation['reservation_date'] . ' ' . $reservation['reservation_time']);
-                                        if ($session_datetime > time()) {
-                                            $diff = $session_datetime - time();
-                                            $days = floor($diff / (60*60*24));
-                                            $hours = floor(($diff % (60*60*24)) / (60*60));
-                                            echo "Dans $days jours et $hours heures";
-                                        } else {
-                                            echo "Séance passée";
-                                        }
-                                        ?>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Places -->
-                            <div class="detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <div>
-                                    <div style="font-weight: 700; font-size: 1.1rem;">
-                                        <?php echo $reservation['number_tickets']; ?> place<?php echo $reservation['number_tickets'] > 1 ? 's' : ''; ?>
-                                    </div>
-                                    <div style="color: #9ca3af; font-size: 0.9rem;">
-                                        Ticket<?php echo $reservation['number_tickets'] > 1 ? 's' : ''; ?> n°<?php echo substr($reservation['reservation_code'], -6); ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Prix -->
-                        <div class="price-tag">
-                            <?php echo number_format($reservation['total_price'], 2, ',', ' '); ?>€
-                        </div>
-                        
-                        <!-- Actions -->
-                        <div class="action-buttons">
-                            <button class="btn-ticket btn-print" onclick="printTicket('<?php echo $reservation['reservation_code']; ?>')">
-                                <i class="fas fa-print"></i> Imprimer
-                            </button>
-                            
-                            <?php if ($can_cancel): ?>
-                            <button class="btn-ticket btn-cancel" onclick="openCancelModal(<?php echo $reservation['reservation_id']; ?>, '<?php echo htmlspecialchars($reservation['film_title']); ?>', '<?php echo $reservation['reservation_date']; ?>', '<?php echo $reservation['reservation_time']; ?>')">
-                                <i class="fas fa-times"></i> Annuler
-                            </button>
-                            <?php else: ?>
-                            <button class="btn-ticket btn-cancel btn-disabled">
-                                <i class="fas fa-times"></i> Annulation impossible
-                            </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
+            
+            <!-- Filtres -->
+            <div class="mb-6 flex gap-4 flex-wrap">
+                <button onclick="filterReservations('all')" class="filter-btn active px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 hover:bg-orange-500/30 transition">
+                    Toutes
+                </button>
+                <button onclick="filterReservations('upcoming')" class="filter-btn px-4 py-2 rounded-lg bg-green-500/20 border border-green-500/30 hover:bg-green-500/30 transition">
+                    À venir
+                </button>
+                <button onclick="filterReservations('past')" class="filter-btn px-4 py-2 rounded-lg bg-gray-500/20 border border-gray-500/30 hover:bg-gray-500/30 transition">
+                    Passées
+                </button>
             </div>
+            
+            <!-- Liste des Réservations -->
+            <?php if (empty($reservations)): ?>
+                <div class="empty-state rounded-2xl p-12 text-center">
+                    <i class="fas fa-ticket-alt text-6xl text-gray-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold mb-2">Aucune réservation</h3>
+                    <p class="text-gray-400 mb-6">Vous n'avez pas encore réservé de séances</p>
+                    <a href="../cinemas.php" style="background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform">
+                        <i class="fas fa-search"></i>
+                        Découvrir les cinémas
+                    </a>
+                </div>
+            <?php else: ?>
+                <div class="space-y-6">
+                    <?php foreach ($reservations as $reservation): 
+                        $is_upcoming = $reservation['reservation_date'] >= $today;
+                        $is_today = $reservation['reservation_date'] === $today;
+                    ?>
+                        <div class="reservation-card rounded-2xl p-6 <?php echo $is_upcoming ? 'upcoming' : 'past'; ?>" data-type="<?php echo $is_upcoming ? 'upcoming' : 'past'; ?>">
+                            <div class="flex flex-col md:flex-row gap-6">
+                                
+                                <!-- Poster du Film -->
+                                <div class="flex-shrink-0">
+                                    <?php if (!empty($reservation['film_poster'])): ?>
+                                        <img src="<?php echo htmlspecialchars($reservation['film_poster']); ?>" 
+                                             alt="<?php echo htmlspecialchars($reservation['film_title']); ?>"
+                                             class="film-poster shadow-lg">
+                                    <?php else: ?>
+                                        <div class="film-poster bg-gray-800 flex items-center justify-center">
+                                            <i class="fas fa-film text-4xl text-gray-600"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <!-- Informations -->
+                                <div class="flex-1">
+                                    <div class="flex items-start justify-between mb-4">
+                                        <div>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span class="<?php echo $is_upcoming ? 'upcoming-badge' : 'past-badge'; ?> px-3 py-1 rounded-full text-xs font-bold">
+                                                    <?php echo $is_today ? '🔥 AUJOURD\'HUI' : ($is_upcoming ? '📅 À venir' : '✓ Passée'); ?>
+                                                </span>
+                                                <span class="bg-orange-500/20 px-3 py-1 rounded-full text-xs font-bold text-orange-500">
+                                                    Code: <?php echo htmlspecialchars($reservation['reservation_code']); ?>
+                                                </span>
+                                            </div>
+                                            
+                                            <h3 class="text-2xl font-bold mb-2">
+                                                <?php echo htmlspecialchars($reservation['film_title']); ?>
+                                            </h3>
+                                            
+                                            <div class="flex items-center gap-2 text-gray-400 mb-3">
+                                                <i class="fas fa-building text-orange-500"></i>
+                                                <span class="font-semibold"><?php echo htmlspecialchars($reservation['cinema_name']); ?></span>
+                                            </div>
+                                            
+                                            <?php if (!empty($reservation['cinema_address'])): ?>
+                                                <div class="flex items-center gap-2 text-gray-500 text-sm mb-3">
+                                                    <i class="fas fa-map-marker-alt"></i>
+                                                    <span><?php echo htmlspecialchars($reservation['cinema_address']); ?></span>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Détails de la Séance -->
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                        <div class="bg-gray-800/30 rounded-lg p-3">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <i class="fas fa-calendar text-orange-500"></i>
+                                                <span class="text-xs text-gray-400">Date</span>
+                                            </div>
+                                            <p class="font-bold"><?php echo date('d/m/Y', strtotime($reservation['reservation_date'])); ?></p>
+                                        </div>
+                                        
+                                        <div class="bg-gray-800/30 rounded-lg p-3">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <i class="fas fa-clock text-orange-500"></i>
+                                                <span class="text-xs text-gray-400">Heure</span>
+                                            </div>
+                                            <p class="font-bold"><?php echo $reservation['reservation_time']; ?></p>
+                                        </div>
+                                        
+                                        <div class="bg-gray-800/30 rounded-lg p-3">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <i class="fas fa-users text-orange-500"></i>
+                                                <span class="text-xs text-gray-400">Places</span>
+                                            </div>
+                                            <p class="font-bold"><?php echo $reservation['number_tickets']; ?> place<?php echo $reservation['number_tickets'] > 1 ? 's' : ''; ?></p>
+                                        </div>
+                                        
+                                        <div class="bg-gray-800/30 rounded-lg p-3">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <i class="fas fa-euro-sign text-orange-500"></i>
+                                                <span class="text-xs text-gray-400">Prix</span>
+                                            </div>
+                                            <p class="font-bold text-green-500"><?php echo number_format($reservation['total_price'], 2); ?>€</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Actions -->
+                                    <?php if ($is_upcoming): ?>
+                                        <div class="flex gap-3">
+                                            <button onclick="showQRCode('<?php echo $reservation['reservation_code']; ?>')" 
+                                                    style="background: linear-gradient(135deg, #7800ff 0%, #5500cc 100%);"
+                                                    class="flex-1 px-4 py-2 rounded-lg font-semibold hover:scale-105 transition-transform flex items-center justify-center gap-2">
+                                                <i class="fas fa-qrcode"></i>
+                                                QR Code
+                                            </button>
+                                            
+                                            <button onclick="confirmCancel(<?php echo $reservation['id']; ?>, '<?php echo addslashes($reservation['film_title']); ?>')" 
+                                                    class="cancel-btn px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+                                                <i class="fas fa-times-circle"></i>
+                                                Annuler
+                                            </button>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="bg-gray-800/30 rounded-lg p-3 text-center text-gray-500">
+                                            <i class="fas fa-check-circle mr-2"></i>
+                                            Séance terminée
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </div>
-    </section>
+    </main>
     
-    <!-- Modal d'annulation -->
-    <div id="cancelModal" class="cancel-modal">
-        <div class="cancel-modal-content">
-            <div class="warning-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 style="font-size: 2rem; font-weight: 900; margin-bottom: 1rem; color: white;">Annuler la réservation</h3>
-            <p style="color: #9ca3af; margin-bottom: 2rem; font-size: 1.1rem;" id="cancelModalText">
-                Êtes-vous sûr de vouloir annuler cette réservation ?
-            </p>
-            <form method="POST" id="cancelForm">
-                <input type="hidden" name="reservation_id" id="cancelReservationId">
-                <div style="display: flex; gap: 1rem; justify-content: center;">
-                    <button type="button" onclick="closeCancelModal()" style="padding: 1rem 2rem; background: rgba(255, 140, 0, 0.2); border: 2px solid rgba(255, 140, 0, 0.3); border-radius: 15px; color: white; font-weight: 700; cursor: pointer; transition: all 0.3s;">
-                        <i class="fas fa-arrow-left"></i> Retour
-                    </button>
-                    <button type="submit" name="cancel_reservation" style="padding: 1rem 2rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; border-radius: 15px; color: white; font-weight: 700; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="fas fa-check"></i> Oui, annuler
-                    </button>
+    <!-- Modal QR Code -->
+    <div id="qrModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+        <div class="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 border border-orange-500/30">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold mb-4">Code de Réservation</h3>
+                <div class="bg-white p-6 rounded-xl mb-4">
+                    <div id="qrCodeContainer" class="flex justify-center"></div>
                 </div>
-            </form>
+                <p class="text-gray-400 mb-2">Présentez ce code au cinéma</p>
+                <p id="qrCodeText" class="text-3xl font-black text-orange-500 mb-6"></p>
+                <button onclick="closeQRModal()" style="background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);" class="w-full px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform">
+                    Fermer
+                </button>
+            </div>
         </div>
     </div>
     
+    <!-- Modal Confirmation Annulation -->
+    <div id="cancelModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+        <div class="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 border border-red-500/30">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+                <h3 class="text-2xl font-bold mb-4">Annuler la réservation ?</h3>
+                <p class="text-gray-400 mb-6">
+                    Êtes-vous sûr de vouloir annuler votre réservation pour<br>
+                    <span id="cancelFilmTitle" class="font-bold text-orange-500"></span> ?
+                </p>
+                <form method="POST" class="flex gap-3">
+                    <input type="hidden" name="reservation_id" id="cancelReservationId">
+                    <button type="button" onclick="closeCancelModal()" class="flex-1 px-6 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 transition">
+                        Non, garder
+                    </button>
+                    <button type="submit" name="cancel_reservation" class="cancel-btn flex-1 px-6 py-3 rounded-xl font-bold">
+                        Oui, annuler
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <?php include '../../includes/footer.php'; ?>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
-        // Filtrage des réservations
-        function filterReservations(filter) {
+        // Filtrage
+        function filterReservations(type) {
             const cards = document.querySelectorAll('.reservation-card');
             const buttons = document.querySelectorAll('.filter-btn');
             
-            // Mettre à jour les boutons actifs
-            buttons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent.toLowerCase().includes(filter)) {
-                    btn.classList.add('active');
-                }
-            });
+            buttons.forEach(btn => btn.classList.remove('active', 'bg-orange-500/40'));
+            event.target.classList.add('active', 'bg-orange-500/40');
             
-            // Filtrer les cartes
             cards.forEach(card => {
-                const status = card.dataset.status;
-                const dateTime = new Date(card.dataset.date);
-                const now = new Date();
-                const isUpcoming = dateTime >= now;
-                
-                let show = false;
-                
-                switch(filter) {
-                    case 'all':
-                        show = true;
-                        break;
-                    case 'confirmed':
-                        show = status === 'confirmed';
-                        break;
-                    case 'upcoming':
-                        show = status === 'confirmed' && isUpcoming;
-                        break;
-                    case 'cancelled':
-                        show = status === 'cancelled';
-                        break;
-                    case 'completed':
-                        show = (status === 'completed' || (status === 'confirmed' && !isUpcoming));
-                        break;
+                if (type === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = card.dataset.type === type ? 'block' : 'none';
                 }
-                
-                card.style.display = show ? 'block' : 'none';
-                card.style.animation = show ? 'fadeInUp 0.5s ease forwards' : 'none';
             });
         }
         
-        // Modal d'annulation
-        let cancelModal = document.getElementById('cancelModal');
-        
-        function openCancelModal(reservationId, filmTitle, date, time) {
-            const modalText = document.getElementById('cancelModalText');
-            const formattedDate = new Date(date + ' ' + time).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+        // QR Code
+        function showQRCode(code) {
+            document.getElementById('qrModal').classList.remove('hidden');
+            document.getElementById('qrCodeText').textContent = code;
+            
+            const container = document.getElementById('qrCodeContainer');
+            container.innerHTML = '';
+            
+            new QRCode(container, {
+                text: code,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff"
             });
-            
-            modalText.innerHTML = `
-                Vous êtes sur le point d'annuler votre réservation pour :<br><br>
-                <strong style="color: #ff8c00; font-size: 1.2rem;">${filmTitle}</strong><br>
-                <span style="color: #9ca3af;">${formattedDate}</span><br><br>
-                Cette action est irréversible. Souhaitez-vous continuer ?
-            `;
-            
-            document.getElementById('cancelReservationId').value = reservationId;
-            cancelModal.style.display = 'flex';
+        }
+        
+        function closeQRModal() {
+            document.getElementById('qrModal').classList.add('hidden');
+        }
+        
+        // Annulation
+        function confirmCancel(id, title) {
+            document.getElementById('cancelReservationId').value = id;
+            document.getElementById('cancelFilmTitle').textContent = title;
+            document.getElementById('cancelModal').classList.remove('hidden');
         }
         
         function closeCancelModal() {
-            cancelModal.style.display = 'none';
+            document.getElementById('cancelModal').classList.add('hidden');
         }
         
-        // Impression du ticket
-        function printTicket(reservationCode) {
-            const reservationCard = document.querySelector(`[data-reservation="${reservationCode}"]`);
-            if (!reservationCard) return;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Ticket - ${reservationCode}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; }
-                        .ticket { border: 3px dashed #ff8c00; padding: 20px; max-width: 400px; margin: 0 auto; }
-                        .header { text-align: center; margin-bottom: 20px; }
-                        .cinema-name { font-size: 24px; font-weight: bold; color: #ff8c00; }
-                        .film-title { font-size: 20px; font-weight: bold; margin: 10px 0; }
-                        .qr-code { text-align: center; margin: 20px 0; font-family: monospace; }
-                        .code { font-size: 18px; letter-spacing: 3px; font-weight: bold; }
-                        .info { margin: 10px 0; }
-                        .label { color: #666; }
-                        @media print {
-                            body { -webkit-print-color-adjust: exact; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="ticket">
-                        <div class="header">
-                            <div class="cinema-name">CINETRACK</div>
-                            <div style="color: #666;">Votre billet électronique</div>
-                        </div>
-                        <div class="film-title">${reservationCard.querySelector('.film-title').textContent}</div>
-                        <div class="qr-code">
-                            <div style="border: 1px solid #000; padding: 10px; display: inline-block; margin: 10px;">
-                                <div style="font-size: 12px;">SCAN ME</div>
-                                <div class="code">${reservationCode}</div>
-                            </div>
-                        </div>
-                        <div class="info">
-                            <div class="label">Cinéma:</div>
-                            <div>${reservationCard.querySelector('[data-cinema]').textContent}</div>
-                        </div>
-                        <div class="info">
-                            <div class="label">Date & Heure:</div>
-                            <div>${reservationCard.querySelector('[data-datetime]').textContent}</div>
-                        </div>
-                        <div class="info">
-                            <div class="label">Places:</div>
-                            <div>${reservationCard.querySelector('[data-tickets]').textContent}</div>
-                        </div>
-                        <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
-                            Présentez ce billet à l'entrée du cinéma
-                        </div>
-                    </div>
-                    <script>
-                        window.onload = function() { window.print(); };
-                    </script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
-        
-        // Animation au chargement
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animer les cartes une par une
-            const cards = document.querySelectorAll('.reservation-card');
-            cards.forEach((card, index) => {
-                card.style.animation = `fadeInUp 0.5s ease forwards ${index * 0.1}s`;
-                card.style.opacity = '0';
-            });
-            
-            // Fermer le modal avec Escape
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeCancelModal();
-            });
-            
-            // Fermer le modal en cliquant à l'extérieur
-            cancelModal.addEventListener('click', function(e) {
-                if (e.target === cancelModal) closeCancelModal();
-            });
+        // Fermer modals avec Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeQRModal();
+                closeCancelModal();
+            }
         });
     </script>
 </body>
