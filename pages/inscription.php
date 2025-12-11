@@ -385,6 +385,7 @@ function sendVerificationEmail($email, $username, $token) {
         }
     </style>
 </head>
+
 <body class="gradient-bg text-white min-h-screen flex flex-col">
     
     <!-- Header -->
@@ -503,22 +504,39 @@ function sendVerificationEmail($email, $username, $token) {
                                 <?php endif; ?>
                             </div>
                             
-                            <div>
-                                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Mot de passe</label>
-                                <input type="password" id="password" name="password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
-                                <div class="password-strength mt-2 text-sm" id="password-strength"></div>
-                                <?php if (isset($errors['password'])): ?>
-                                    <div class="error-message"><?php echo htmlspecialchars($errors['password']); ?></div>
+                            <div class="relative">
+                                <input 
+                                    type="password" 
+                                    id="password"
+                                    name="password"
+                                    class="form-input w-full p-3 rounded-lg"
+                                    placeholder="Votre mot de passe"
+                                    required>
+                                    <i class="fa-solid fa-eye absolute right-4 top-3 cursor-pointer text-gray-400"
+                                    id="togglePassword"></i>
+                                </div>
+
+                                <?php if (!empty($errors['password'])): ?>
+                                    <p class="error-message"><?= $errors['password']; ?></p>
                                 <?php endif; ?>
-                            </div>
                             
-                            <div>
-                                <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirmer le mot de passe</label>
-                                <input type="password" id="confirm-password" name="confirm-password" class="w-full px-4 py-3 form-input rounded-lg" placeholder="••••••••" required>
-                                <?php if (isset($errors['confirm-password'])): ?>
-                                    <div class="error-message"><?php echo htmlspecialchars($errors['confirm-password']); ?></div>
-                                <?php endif; ?>
-                            </div>
+                           <div class="relative mt-4">
+    <input 
+        type="password" 
+        id="confirm-password"
+        name="confirm-password"
+        class="form-input w-full p-3 rounded-lg"
+        placeholder="Confirmez le mot de passe"
+        required
+    >
+    <i class="fa-solid fa-eye absolute right-4 top-3 cursor-pointer text-gray-400"
+       id="toggleConfirmPassword"></i>
+</div>
+
+<?php if (!empty($errors['confirm-password'])): ?>
+    <p class="error-message"><?= $errors['confirm-password']; ?></p>
+<?php endif; ?>
+
                             
                             <!-- reCAPTCHA -->
                             <div class="captcha-container flex justify-center my-4">
@@ -608,5 +626,31 @@ function sendVerificationEmail($email, $username, $token) {
             });
         });
     </script>
+
+
+<script>
+    // Mot de passe
+    const togglePassword = document.getElementById("togglePassword");
+    const password = document.getElementById("password");
+
+    togglePassword.addEventListener("click", () => {
+        const type = password.getAttribute("type") === "password" ? "text" : "password";
+        password.setAttribute("type", type);
+        togglePassword.classList.toggle("fa-eye");
+        togglePassword.classList.toggle("fa-eye-slash");
+    });
+
+    // Confirmation mot de passe
+    const toggleConfirmPassword = document.getElementById("toggleConfirmPassword");
+    const confirmPassword = document.getElementById("confirm-password");
+
+    toggleConfirmPassword.addEventListener("click", () => {
+        const type = confirmPassword.getAttribute("type") === "password" ? "text" : "password";
+        confirmPassword.setAttribute("type", type);
+        toggleConfirmPassword.classList.toggle("fa-eye");
+        toggleConfirmPassword.classList.toggle("fa-eye-slash");
+    });
+</script>
+
 </body>
 </html>

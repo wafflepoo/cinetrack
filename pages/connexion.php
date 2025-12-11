@@ -74,11 +74,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition">
                     </div>
 
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Mot de passe</label>
-                        <input type="password" id="password" name="password" required
-                            class="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition">
-                    </div>
+                    <div class="relative">
+    <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Mot de passe</label>
+
+    <input type="password" id="password" name="password" required
+        class="w-full px-4 py-3 pr-12 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition">
+
+    <!-- Icône œil -->
+    <span onclick="togglePassword()" 
+          class="absolute right-3 top-[42px] cursor-pointer text-gray-400 hover:text-gray-200">
+        <i id="eyeIcon" class="fa-solid fa-eye"></i>
+    </span>
+</div>
+
 
                     <div class="flex items-center justify-between">
                         <label class="flex items-center">
@@ -103,6 +111,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </section>
     </main>
     
+    <script>
+function togglePassword() {
+    const input = document.getElementById("password");
+    const icon = document.getElementById("eyeIcon");
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    }
+}
+</script>
+
     <?php include '../includes/footer.php'; ?>
 </body>
 </html>
