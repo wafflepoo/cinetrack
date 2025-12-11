@@ -78,7 +78,6 @@ if ($is_in_user) {
     </a>
                         
 
-
                   
                         <?php if ($isLoggedIn): ?>
                             <a href="<?php echo $base_path; ?>pages/user/dashboard.php" class="nav-link">
