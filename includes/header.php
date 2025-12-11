@@ -59,6 +59,10 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                 <a href="<?= $base_path ?>pages/user/reviews.php" class="block text-gray-200 hover:text-white text-lg">Critiques</a>
                 <a href="<?= $base_path ?>pages/user/lists.php" class="block text-gray-200 hover:text-white text-lg">Listes</a>
                 <a href="<?= $base_path ?>pages/user/recommendations.php" class="block text-gray-200 hover:text-white text-lg">Recommandations</a>
+                <a href="<?= $base_path ?>pages/user/reservations.php" class="block text-gray-200 hover:text-white text-lg flex items-center gap-2">
+                    <i class="fas fa-ticket-alt text-orange-500"></i>
+                    Réservations
+                </a>
 
                 <hr class="border-gray-700 my-4">
 
@@ -120,6 +124,10 @@ $base_path = $is_in_user ? "../../" : ($is_in_pages ? "../" : "");
                         <a href="<?= $base_path ?>pages/user/reviews.php" class="nav-link">Critiques</a>
                         <a href="<?= $base_path ?>pages/user/lists.php" class="nav-link">Listes</a>
                         <a href="<?= $base_path ?>pages/user/recommendations.php" class="nav-link">Recommandations</a>
+                        <a href="<?= $base_path ?>pages/user/reservations.php" class="nav-link flex items-center gap-1">
+                            <i class="fas fa-ticket-alt"></i>
+                            Réservations
+                        </a>
                     <?php endif; ?>
 
                 </div>

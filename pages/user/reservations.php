@@ -336,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])
                                                 QR Code
                                             </button>
                                             
-                                            <button onclick="confirmCancel(<?php echo $reservation['id']; ?>, '<?php echo addslashes($reservation['film_title']); ?>')" 
+                                            <button onclick="confirmCancel(<?php echo $reservation['id']; ?>, <?php echo htmlspecialchars(json_encode($reservation['film_title']), ENT_QUOTES); ?>)" 
                                                     class="cancel-btn px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
                                                 <i class="fas fa-times-circle"></i>
                                                 Annuler
