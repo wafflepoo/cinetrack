@@ -14,14 +14,16 @@
             </h2>
             <p class="text-xl text-gray-300 mb-8 relative z-10">
                 Créez votre compte gratuitement et accédez à des milliers de<br/>
-                films, séries et recommandations personnalisées par IA.
+                films, séries et recommandations personnalisées.
             </p>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10">
-                <button class="px-8 py-4 btn-primary rounded-xl font-bold text-lg flex items-center space-x-2 shadow-lg transform hover:-translate-y-1 transition-all duration-300 pulse-animation">
+                <a href="../pages/inscription.php" 
+                   class="px-8 py-4 btn-primary rounded-xl font-bold text-lg flex items-center space-x-2 shadow-lg transform hover:-translate-y-1 transition-all duration-300 pulse-animation inline-block text-center">
                     <span>Commencer Gratuitement</span>
                     <i class="fas fa-arrow-right transform group-hover:translate-x-1 transition-transform"></i>
-                </button>
-                <button class="px-8 py-4 glass hover:bg-gray-700/30 rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1">
+                </a>
+                <button onclick="scrollToTop()" 
+                        class="px-8 py-4 glass hover:bg-gray-700/30 rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer">
                     Explorer sans compte
                 </button>
             </div>
@@ -42,3 +44,12 @@
         </div>
     </div>
 </section>
+
+<script>
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+</script>
