@@ -73,6 +73,9 @@ if ($is_in_user) {
                         <a href="<?php echo $base_path; ?>pages/series.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'series.php' ? 'active' : ''; ?>">
                             Séries
                         </a>
+                        <a href="<?php echo $base_path; ?>pages/cinemas.php" class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'cinemas.php' ? 'active' : ''; ?>">
+        <i class="fas fa-film mr-1"></i> Cinémas
+    </a>
                         
     <a href="pages/scene-search.php" class="nav-link flex items-center gap-2">
         <i class="fas fa-camera-movie"></i>
@@ -186,6 +189,10 @@ if ($is_in_user) {
                         <span class="text-xs mt-1">Séries</span>
                     </a>
                   
+                     <a href="<?php echo $base_path; ?>pages/cinemas.php" class="mobile-nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'cinemas.php' ? 'active' : ''; ?>">
+        <i class="fas fa-building"></i>
+        <span class="text-xs mt-1">Cinémas</span>
+    </a>
                     <?php if ($isLoggedIn): ?>
                         <a href="<?php echo $base_path; ?>pages/user/dashboard.php" class="mobile-nav-link">
                             <i class="fas fa-tachometer-alt"></i>

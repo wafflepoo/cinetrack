@@ -11,6 +11,9 @@ define('TMDB_API_KEY', '80e38ecd2c2b2342551ab68d85bee288');
 define('TMDB_BASE_URL', 'https://api.themoviedb.org/3/');
 define('TMDB_IMAGE_BASE_URL', 'https://image.tmdb.org/t/p/');
 
+define('GOOGLE_API_KEY', 'AIzaSyBXRR-kuWzY0KVPdAIXURdFUC_oOvGm2P4');
+
+
 // reCAPTCHA
 define('RECAPTCHA_SITE_KEY', '6LcrXhMsAAAAAKrE4f5EtzyYoqsYbY9yZtTOdlHU');
 define('RECAPTCHA_SECRET_KEY', '6LcrXhMsAAAAAJt7LRbhPd1bDcAQc4CTZsK7tBmF');

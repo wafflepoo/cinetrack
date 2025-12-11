@@ -329,3 +329,321 @@ button:focus, input:focus, select:focus, textarea:focus {
     position: relative !important;
     margin-top: 20px;
 }
+/* cinema-styles.css - À ajouter à ton fichier CSS existant */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Cinéma Hero */
+.cinema-hero {
+    background: linear-gradient(135deg, 
+        rgba(15, 23, 42, 0.95) 0%, 
+        rgba(30, 41, 59, 0.95) 50%, 
+        rgba(51, 65, 85, 0.95) 100%),
+        url('https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=2070') center/cover;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.cinema-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 50% 50%, 
+        rgba(255, 140, 0, 0.15) 0%, 
+        transparent 70%);
+    animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.cinema-hero-title {
+    font-size: 4.5rem;
+    background: linear-gradient(135deg, #ff8c00, #ff6b00, #ffa500, #ff8c00);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s ease infinite;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+}
+
+/* Cinema Card Premium */
+.cinema-card-premium {
+    background: linear-gradient(135deg, 
+        rgba(30, 41, 59, 0.8) 0%, 
+        rgba(15, 23, 42, 0.9) 100%);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 140, 0, 0.2);
+    border-radius: 24px;
+    overflow: hidden;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.cinema-card-premium::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 140, 0, 0.6), 
+        transparent);
+}
+
+.cinema-card-premium:hover {
+    transform: translateY(-12px) scale(1.02);
+    border-color: rgba(255, 140, 0, 0.5);
+    box-shadow: 
+        0 25px 50px rgba(255, 140, 0, 0.15),
+        0 0 100px rgba(255, 140, 0, 0.1);
+}
+
+.cinema-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #ff8c00, #ff6b00);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    animation: float 6s ease-in-out infinite;
+    box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
+}
+
+/* Film Cards Grid */
+.films-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    padding: 2rem 0;
+}
+
+.film-card-premium {
+    background: linear-gradient(135deg, 
+        rgba(30, 41, 59, 0.9) 0%, 
+        rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+.film-card-premium::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, 
+        transparent 0%, 
+        rgba(255, 140, 0, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.film-card-premium:hover {
+    transform: translateY(-8px) scale(1.03);
+    border-color: rgba(255, 140, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(255, 140, 0, 0.2);
+}
+
+.film-card-premium:hover::after {
+    opacity: 1;
+}
+
+.film-poster-container {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 2/3;
+}
+
+.film-poster-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s ease;
+}
+
+.film-card-premium:hover .film-poster-container img {
+    transform: scale(1.1);
+}
+
+.film-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgba(15, 23, 42, 0.95) 0%,
+        transparent 50%,
+        transparent 100%
+    );
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.film-card-premium:hover .film-overlay {
+    opacity: 1;
+}
+
+/* Reservation Modal */
+.reservation-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+.reservation-content {
+    background: linear-gradient(135deg, 
+        rgba(30, 41, 59, 0.95) 0%, 
+        rgba(15, 23, 42, 0.98) 100%);
+    border: 1px solid rgba(255, 140, 0, 0.3);
+    border-radius: 32px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2.5rem;
+    position: relative;
+    animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.reservation-steps {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    position: relative;
+}
+
+.step.active {
+    background: linear-gradient(135deg, rgba(255, 140, 0, 0.2), rgba(255, 107, 0, 0.2));
+    border: 1px solid rgba(255, 140, 0, 0.4);
+}
+
+.step-number {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #ff8c00, #ff6b00);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    margin: 0 auto 0.5rem;
+}
+
+/* Price Tag */
+.price-tag {
+    background: linear-gradient(135deg, #ff8c00, #ff6b00);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-weight: bold;
+    display: inline-block;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Gradient Buttons */
+.btn-gradient {
+    background: linear-gradient(135deg, #ff8c00, #ff6b00);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-gradient:hover::before {
+    left: 100%;
+}
+
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(255, 140, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cinema-hero-title {
+        font-size: 3rem;
+    }
+    
+    .cinema-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .films-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+}
