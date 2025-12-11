@@ -1,6 +1,6 @@
 <?php
-// films.php - TMDb API Integration
-include '../includes/config.conf.php'; // CORRECTION: .conf.php → .php
+// films.php - TMDb API Integration avec recherche AJAX
+include '../includes/config.conf.php';
 
 // Get parameters for filtering
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -8,12 +8,11 @@ $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
 $year_filter = isset($_GET['year']) ? $_GET['year'] : '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-// Function to fetch movies from TMDb API - CORRIGÉE
+// Function to fetch movies from TMDb API
 function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     $api_key = TMDB_API_KEY;
     $base_url = TMDB_BASE_URL;
     
-    // Build the API URL based on filters
     if (!empty($search)) {
         $url = $base_url . 'search/movie?api_key=' . $api_key . '&query=' . urlencode($search) . '&language=fr-FR&page=' . $page;
     } else {
@@ -35,7 +34,6 @@ function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_USERAGENT => 'CineTrack/1.0'
-        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -55,7 +53,7 @@ function fetchMoviesFromAPI($search = '', $genre = '', $year = '', $page = 1) {
     return ['movies' => [], 'total_pages' => 1, 'total_results' => 0];
 }
 
-// Function to get genre list from TMDb - CORRIGÉE
+// Function to get genre list from TMDb
 function fetchGenresFromAPI() {
     $api_key = TMDB_API_KEY;
     $url = TMDB_BASE_URL . 'genre/movie/list?api_key=' . $api_key . '&language=fr-FR';
@@ -66,7 +64,6 @@ function fetchGenresFromAPI() {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_SSL_VERIFYPEER => false
-        // SUPPRIMEZ les lignes Authorization qui utilisent TMDB_ACCESS_TOKEN
     ]);
     
     $response = curl_exec($ch);
@@ -93,7 +90,15 @@ function getDefaultGenres() {
         ['id' => 27, 'name' => 'Horreur'],
         ['id' => 10749, 'name' => 'Romance'],
         ['id' => 53, 'name' => 'Thriller'],
-        ['id' => 16, 'name' => 'Animation']
+        ['id' => 16, 'name' => 'Animation'],
+        ['id' => 80, 'name' => 'Crime'],
+        ['id' => 99, 'name' => 'Documentaire'],
+        ['id' => 10751, 'name' => 'Familial'],
+        ['id' => 36, 'name' => 'Historique'],
+        ['id' => 10402, 'name' => 'Musique'],
+        ['id' => 9648, 'name' => 'Mystère'],
+        ['id' => 10752, 'name' => 'Guerre'],
+        ['id' => 37, 'name' => 'Western']
     ];
 }
 
@@ -132,6 +137,9 @@ foreach ($apiGenres as $genre) {
 }
 
 $total_films = count($films);
+
+// Get current year for year dropdown
+$current_year = date('Y');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -144,9 +152,18 @@ $total_films = count($films);
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/animations.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
         .films-hero {
-            background: linear-gradient(135deg, rgba(255, 140, 0, 0.1) 0%, rgba(120, 0, 255, 0.1) 100%);
-            padding: 120px 0 60px;
+            background: linear-gradient(135deg, 
+                rgba(255, 140, 0, 0.15) 0%, 
+                rgba(120, 0, 255, 0.15) 50%, 
+                rgba(0, 100, 255, 0.1) 100%);
+            padding: 120px 0 40px;
             position: relative;
             overflow: hidden;
         }
@@ -159,155 +176,315 @@ $total_films = count($films);
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(255, 140, 0, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(120, 0, 255, 0.15) 0%, transparent 50%);
-            filter: blur(60px);
+                radial-gradient(circle at 20% 80%, rgba(255, 140, 0, 0.2) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(120, 0, 255, 0.2) 0%, transparent 60%);
+            filter: blur(80px);
             z-index: -1;
+        }
+        
+        .hero-content h1 {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 50%, #ffa500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
         }
         
         .hero-stats {
             display: flex;
-            gap: 2rem;
+            gap: 3rem;
             margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
         .stat {
             text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem 2rem;
+            border-radius: 20px;
+            min-width: 150px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 140, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.2);
         }
         
         .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 2.5rem;
+            font-weight: 900;
             background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: block;
+            line-height: 1;
         }
         
         .stat-label {
             color: #9ca3af;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 0.5rem;
         }
         
-        .filters-section {
-            background: rgba(30, 30, 40, 0.25);
-            backdrop-filter: blur(10px);
+        .search-section {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 2rem 0;
+            position: sticky;
+            top: 70px;
+            z-index: 40;
         }
         
-        .filters-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .search-box {
+        .search-container {
             position: relative;
-            max-width: 500px;
+            max-width: 800px;
             margin: 0 auto;
         }
         
-        .search-box input {
-            width: 100%;
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .search-input-wrapper {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 140, 0, 0.2);
             border-radius: 50px;
-            color: white;
-            font-size: 1rem;
-            backdrop-filter: blur(10px);
+            padding: 5px;
+            transition: all 0.3s ease;
         }
         
-        .search-box input:focus {
-            outline: none;
+        .search-input-wrapper:focus-within {
             border-color: #ff8c00;
-            box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .search-input-wrapper input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            outline: none;
+        }
+        
+        .search-input-wrapper input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
         }
         
         .search-btn {
             position: absolute;
-            right: 5px;
+            right: 10px;
             top: 50%;
             transform: translateY(-50%);
-            background: #ff8c00;
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
             border: none;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             color: white;
             cursor: pointer;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .search-btn:hover {
-            background: #ff6b00;
             transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 5px 20px rgba(255, 140, 0, 0.5);
         }
         
-        .filter-container {
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 140, 0, 0.2);
+            border-radius: 15px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .search-result-item {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
+            align-items: center;
             gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+        }
+        
+        .search-result-item:hover {
+            background: rgba(255, 140, 0, 0.1);
+            border-left: 3px solid #ff8c00;
+        }
+        
+        .search-result-item img {
+            width: 50px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .search-result-info h4 {
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .search-result-info p {
+            color: #9ca3af;
+            font-size: 0.8rem;
+        }
+        
+        .filters-section {
+            padding: 2rem 0;
+            background: rgba(30, 41, 59, 0.3);
+        }
+        
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
         
         .filter-select {
+            width: 100%;
             padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
             color: white;
-            backdrop-filter: blur(10px);
-            min-width: 150px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
         }
         
         .filter-select:focus {
             outline: none;
             border-color: #ff8c00;
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
         }
         
-        .clear-filters {
-            padding: 0.75rem 1rem;
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 10px;
-            color: #ef4444;
-            text-decoration: none;
+        .filter-select option {
+            background: #1f2937;
+            color: white;
+            padding: 10px;
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        
+        .clear-btn, .apply-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
-        .clear-filters:hover {
-            background: rgba(239, 68, 68, 0.3);
+        .clear-btn {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .apply-btn {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+            border: none;
+            color: white;
+        }
+        
+        .apply-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3);
         }
         
         .movies-section {
-            padding: 4rem 0;
+            padding: 3rem 0;
         }
         
         .section-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(255, 140, 0, 0.2);
         }
         
         .section-title {
             font-size: 2rem;
-            font-weight: bold;
-            color: white;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .results-count {
             color: #9ca3af;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
         }
         
         .movies-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 3rem;
+        }
+        
+        @media (min-width: 1024px) {
+            .movies-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 2rem;
+            }
         }
         
         .movie-card {
@@ -318,6 +495,7 @@ $total_films = count($films);
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
+            position: relative;
         }
         
         .movie-card:hover {
@@ -336,7 +514,7 @@ $total_films = count($films);
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s ease;
+            transition: transform 0.5s ease;
         }
         
         .movie-card:hover .movie-poster img {
@@ -349,7 +527,10 @@ $total_films = count($films);
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 50%, rgba(0,0,0,0.8) 100%);
+            background: linear-gradient(180deg, 
+                rgba(0,0,0,0.3) 0%, 
+                transparent 30%, 
+                rgba(0,0,0,0.9) 100%);
             opacity: 0;
             transition: opacity 0.3s ease;
             display: flex;
@@ -362,8 +543,14 @@ $total_films = count($films);
             opacity: 1;
         }
         
-        .favorite-btn, .play-btn {
-            background: rgba(0, 0, 0, 0.7);
+        .movie-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .action-btn {
+            background: rgba(0, 0, 0, 0.8);
             border: none;
             border-radius: 50%;
             width: 40px;
@@ -374,39 +561,41 @@ $total_films = count($films);
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(5px);
         }
         
-        .favorite-btn:hover {
-            background: #ef4444;
-            transform: scale(1.1);
-        }
-        
-        .play-btn:hover {
+        .action-btn:hover {
             background: #ff8c00;
             transform: scale(1.1);
         }
         
         .movie-rating {
-            background: rgba(0, 0, 0, 0.8);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.9) 0%, rgba(255, 165, 0, 0.9) 100%);
             padding: 0.5rem 1rem;
             border-radius: 20px;
-            color: #ffd700;
+            color: white;
             font-weight: bold;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
         }
         
         .movie-info {
-            padding: 1.5rem;
+            padding: 1.2rem;
         }
         
         .movie-title {
-            font-size: 1.1rem;
-            font-weight: bold;
+            font-size: 1rem;
+            font-weight: 700;
             color: white;
             margin-bottom: 0.5rem;
-            line-height: 1.4;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
         .movie-meta {
@@ -414,19 +603,40 @@ $total_films = count($films);
             justify-content: space-between;
             align-items: center;
             color: #9ca3af;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
+        }
+        
+        .movie-year {
+            background: rgba(255, 140, 0, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            color: #ff8c00;
+            font-weight: 600;
+        }
+        
+        .movie-reviews {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
         
         .no-movies {
             text-align: center;
             padding: 4rem 2rem;
             color: #9ca3af;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            border: 2px dashed rgba(255, 255, 255, 0.1);
         }
         
         .no-movies i {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
+            background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .pagination {
@@ -434,42 +644,139 @@ $total_films = count($films);
             justify-content: center;
             gap: 0.5rem;
             margin-top: 3rem;
+            flex-wrap: wrap;
         }
         
         .pagination a, .pagination span {
             padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
             color: white;
             text-decoration: none;
             transition: all 0.3s ease;
+            min-width: 45px;
+            text-align: center;
+            font-weight: 600;
         }
         
-        .pagination a:hover {
-            background: #ff8c00;
+        .pagination a:hover:not(.disabled) {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
             border-color: #ff8c00;
+            transform: translateY(-2px);
         }
         
         .pagination .current {
-            background: #ff8c00;
+            background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
             border-color: #ff8c00;
         }
         
+        .pagination .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         @media (max-width: 768px) {
+            .films-hero {
+                padding: 100px 0 30px;
+            }
+            
+            .hero-stats {
+                gap: 1rem;
+            }
+            
+            .stat {
+                min-width: 120px;
+                padding: 1rem 1.5rem;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+            
+            .search-section {
+                padding: 1.5rem 0;
+                top: 60px;
+            }
+            
+            .search-input-wrapper {
+                border-radius: 25px;
+            }
+        
+            .search-input-wrapper input {
+                padding: 0.875rem 1rem;
+                font-size: 1rem;
+            }
+        
+            .search-btn {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .filters-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .filter-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
             .movies-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 1rem;
             }
-            
-            .filter-container {
-                flex-direction: column;
-                align-items: center;
+        }
+        
+        @media (max-width: 480px) {
+            .movies-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
             }
             
-            .filter-select {
-                width: 100%;
-                max-width: 300px;
+            .stat {
+                min-width: 100%;
+            }
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #ff8c00;
+        }
+        
+        .loading-spinner i {
+            animation: spin 1s linear infinite;
+            font-size: 2rem;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Animation pour l'apparition des cartes */
+        .movie-card {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
     </style>
@@ -481,18 +788,43 @@ $total_films = count($films);
         <section class="films-hero">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="hero-content text-center">
-                    <h1 class="text-5xl md:text-7xl font-black mb-6">🎬 Tous les Films</h1>
-                    <p class="text-xl text-gray-300 mb-8">Découvrez notre vaste collection de films</p>
-                    <div class="hero-stats justify-center">
+                    <h1 class="text-4xl md:text-6xl lg:text-7xl font-black mb-4">🎬 TOUS LES FILMS</h1>
+                    <p class="text-lg md:text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+                        Explorez notre collection complète de films. Trouvez vos prochains coups de cœur cinématographiques.
+                    </p>
+                    <div class="hero-stats">
                         <div class="stat">
-                            <span class="stat-number"><?php echo $total_results; ?></span>
-                            <span class="stat-label">Films</span>
+                            <span class="stat-number"><?php echo number_format($total_results); ?></span>
+                            <span class="stat-label">Films Totaux</span>
                         </div>
                         <div class="stat">
-                            <span class="stat-number"><?php echo $total_films; ?></span>
-                            <span class="stat-label">Disponibles</span>
+                            <span class="stat-number"><?php echo number_format($total_films); ?></span>
+                            <span class="stat-label">Disponibles Maintenant</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number"><?php echo count($genres); ?></span>
+                            <span class="stat-label">Genres</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               id="live-search"
+                               placeholder="Rechercher un film par titre, acteur ou réalisateur..."
+                               value="<?php echo htmlspecialchars($search_query); ?>"
+                               autocomplete="off">
+                        <button type="button" class="search-btn" onclick="performSearch()">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div id="search-results"></div>
                 </div>
             </div>
         </section>
@@ -500,21 +832,10 @@ $total_films = count($films);
         <!-- Filters Section -->
         <section class="filters-section">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <form method="GET" action="" class="filters-form">
-                    <div class="search-container">
-                        <div class="search-box">
-                            <input type="text" 
-                                   name="search" 
-                                   placeholder="Rechercher un film..." 
-                                   value="<?php echo htmlspecialchars($search_query); ?>">
-                            <button type="submit" class="search-btn">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-container">
-                        <select name="genre" class="filter-select">
+                <form method="GET" action="" id="filters-form" class="filters-grid">
+                    <div class="filter-group">
+                        <label for="genre-select"><i class="fas fa-tag mr-2"></i>Genre</label>
+                        <select name="genre" id="genre-select" class="filter-select">
                             <option value="">Tous les genres</option>
                             <?php foreach($genres as $genre): ?>
                                 <option value="<?php echo $genre['id']; ?>" 
@@ -523,88 +844,320 @@ $total_films = count($films);
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        
-                        <select name="year" class="filter-select">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="year-select"><i class="fas fa-calendar-alt mr-2"></i>Année</label>
+                        <select name="year" id="year-select" class="filter-select">
                             <option value="">Toutes les années</option>
-                            <?php for($year = date('Y'); $year >= 2000; $year--): ?>
+                            <?php for($year = $current_year; $year >= 1900; $year--): ?>
                                 <option value="<?php echo $year; ?>" 
                                     <?php echo $year_filter == $year ? 'selected' : ''; ?>>
                                     <?php echo $year; ?>
                                 </option>
                             <?php endfor; ?>
                         </select>
-                        
+                    </div>
+                    
+                    <div class="filter-actions">
                         <?php if($search_query || $genre_filter || $year_filter): ?>
-                            <a href="films.php" class="clear-filters">
-                                <i class="fas fa-times"></i> Effacer
+                            <a href="films.php" class="clear-btn">
+                                <i class="fas fa-times"></i> Effacer tout
                             </a>
                         <?php endif; ?>
+                        <button type="submit" class="apply-btn">
+                            <i class="fas fa-filter"></i> Appliquer
+                        </button>
                     </div>
                 </form>
             </div>
         </section>
 
-<div class="movies-grid">
-    <?php foreach($films as $film): ?>
-        <div class="movie-card" onclick="viewMovieDetails(<?php echo $film['id_film']; ?>)">
-            <div class="movie-poster">
-                <img src="<?php echo $film['poster']; ?>" 
-                     alt="<?php echo htmlspecialchars($film['titre']); ?>"
-                     loading="lazy">
-                <div class="movie-overlay">
-                    <div class="flex justify-between">
-                        <button class="favorite-btn" onclick="event.stopPropagation(); addToWatchlist(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>')">
-                            <i class="far fa-heart"></i>
-                        </button>
-                        <button class="play-btn" onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)">
-                            <i class="fas fa-play"></i>
-                        </button>
-                    </div>
-                    <div class="movie-rating">
-                        <i class="fas fa-star"></i>
-                        <span><?php echo number_format($film['note_moyenne'], 1); ?></span>
+        <!-- Movies Section -->
+        <section class="movies-section">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="section-header">
+                    <h2 class="section-title">FILMS <?php echo $search_query ? 'TROUVÉS' : 'POPULAIRES'; ?></h2>
+                    <div class="results-count">
+                        <?php if($search_query): ?>
+                            Résultats pour "<?php echo htmlspecialchars($search_query); ?>"
+                        <?php else: ?>
+                            <?php echo number_format($total_results); ?> films disponibles
+                        <?php endif; ?>
                     </div>
                 </div>
-            </div>
-            <div class="movie-info">
-                <h3 class="movie-title"><?php echo htmlspecialchars($film['titre']); ?></h3>
-                <div class="movie-meta">
-                    <span class="movie-year">
-                        <?php echo !empty($film['date_sortie']) ? date('Y', strtotime($film['date_sortie'])) : 'N/A'; ?>
-                    </span>
-                    <span class="movie-reviews">
-                        <i class="fas fa-comment"></i>
-                        <?php echo $film['nb_critiques']; ?>
-                    </span>
+                
+                <div id="movies-container">
+                    <?php if(!empty($films)): ?>
+                        <div class="movies-grid">
+                            <?php foreach($films as $index => $film): ?>
+                                <div class="movie-card" style="animation-delay: <?php echo $index * 0.1; ?>s" 
+                                     onclick="viewMovieDetails(<?php echo $film['id_film']; ?>)">
+                                    <div class="movie-poster">
+                                        <img src="<?php echo $film['poster']; ?>" 
+                                             alt="<?php echo htmlspecialchars($film['titre']); ?>"
+                                             loading="lazy"
+                                             onerror="this.src='https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=400&fit=crop'">
+                                        <div class="movie-overlay">
+                                            <div class="movie-actions">
+                                                <button class="action-btn favorite-btn" 
+                                                        onclick="event.stopPropagation(); addToWatchlist(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>')">
+                                                    <i class="far fa-heart"></i>
+                                                </button>
+                                                <button class="action-btn play-btn" 
+                                                        onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            </div>
+                                            <div class="movie-rating">
+                                                <i class="fas fa-star"></i>
+                                                <span><?php echo number_format($film['note_moyenne'], 1); ?>/10</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="movie-info">
+                                        <h3 class="movie-title"><?php echo htmlspecialchars($film['titre']); ?></h3>
+                                        <div class="movie-meta">
+                                            <span class="movie-year">
+                                                <?php echo !empty($film['date_sortie']) ? date('Y', strtotime($film['date_sortie'])) : 'N/A'; ?>
+                                            </span>
+                                            <span class="movie-reviews">
+                                                <i class="fas fa-comment"></i>
+                                                <?php echo number_format($film['nb_critiques']); ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="no-movies">
+                            <i class="fas fa-film"></i>
+                            <h3 class="text-2xl font-bold mb-2">Aucun film trouvé</h3>
+                            <p class="text-gray-400">
+                                <?php if($search_query): ?>
+                                    Aucun résultat pour "<?php echo htmlspecialchars($search_query); ?>"
+                                <?php else: ?>
+                                    Aucun film disponible pour le moment
+                                <?php endif; ?>
+                            </p>
+                            <?php if($search_query || $genre_filter || $year_filter): ?>
+                                <a href="films.php" class="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                                    Voir tous les films
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
+                
+                <!-- Pagination -->
+<?php if($total_pages > 1): ?>
+    <div class="pagination">
+        <?php if($page > 1): ?>
+            <a href="?page=<?php echo $page-1; ?><?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?><?php echo $genre_filter ? '&genre='.$genre_filter : ''; ?><?php echo $year_filter ? '&year='.$year_filter : ''; ?>">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        <?php else: ?>
+            <span class="disabled"><i class="fas fa-chevron-left"></i></span>
+        <?php endif; ?>
+        
+        <?php 
+        $start = max(1, $page - 2);
+        $end = min($total_pages, $page + 2);
+        
+        if($start > 1) {
+            echo '<a href="?page=1' . ($search_query ? '&search='.urlencode($search_query) : '') . ($genre_filter ? '&genre='.$genre_filter : '') . ($year_filter ? '&year='.$year_filter : '') . '">1</a>';
+            if($start > 2) echo '<span class="disabled">...</span>';
+        }
+        
+        for($i = $start; $i <= $end; $i++): ?>
+            <?php if($i == $page): ?>
+                <span class="current"><?php echo $i; ?></span>
+            <?php else: ?>
+                <a href="?page=<?php echo $i; ?><?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?><?php echo $genre_filter ? '&genre='.$genre_filter : ''; ?><?php echo $year_filter ? '&year='.$year_filter : ''; ?>">
+                    <?php echo $i; ?>
+                </a>
+            <?php endif; ?>
+        <?php endfor; ?>
+        
+        <?php
+        // CORRECTION ICI : Syntaxe PHP correcte
+        if($end < $total_pages) {
+            if($end < $total_pages - 1) echo '<span class="disabled">...</span>';
+            echo '<a href="?page=' . $total_pages . ($search_query ? '&search='.urlencode($search_query) : '') . ($genre_filter ? '&genre='.$genre_filter : '') . ($year_filter ? '&year='.$year_filter : '') . '">' . $total_pages . '</a>';
+        }
+        ?>
+        
+        <?php if($page < $total_pages): ?>
+            <a href="?page=<?php echo $page+1; ?><?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?><?php echo $genre_filter ? '&genre='.$genre_filter : ''; ?><?php echo $year_filter ? '&year='.$year_filter : ''; ?>">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        <?php else: ?>
+            <span class="disabled"><i class="fas fa-chevron-right"></i></span>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
             </div>
-        </div>
-    <?php endforeach; ?>
-</div>
+        </section>
+    </main>
 
-<script>
-function viewMovieDetails(movieId) {
-    window.location.href = 'movie-details.php?id=' + movieId;
-}
-function addToWatchlist(movieId, movieTitle, moviePoster) {
-    // AJAX call to add to watchlist
-    fetch('/add_to_watchlist.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'movie_id=' + movieId + '&movie_title=' + encodeURIComponent(movieTitle) + '&movie_poster=' + encodeURIComponent(moviePoster)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Show success message
-            showNotification('Film ajouté à votre watchlist!', 'success');
-        } else {
-            showNotification('Erreur: ' + data.message, 'error');
+    <script>
+    // Recherche en temps réel avec AJAX
+    let searchTimeout;
+    const searchInput = document.getElementById('live-search');
+    const searchResults = document.getElementById('search-results');
+    
+    searchInput.addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            performLiveSearch(query);
+        }, 300);
+    });
+    
+    function performLiveSearch(query) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '../api/search-movies.php?query=' + encodeURIComponent(query), true);
+        
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    const results = JSON.parse(xhr.responseText);
+                    displaySearchResults(results, query);
+                } else {
+                    searchResults.innerHTML = '<div class="p-4 text-center text-gray-400">Erreur de recherche</div>';
+                    searchResults.style.display = 'block';
+                }
+            }
+        };
+        
+        xhr.send();
+    }
+    
+    function displaySearchResults(results, query) {
+        if (results.length === 0) {
+            searchResults.innerHTML = `
+                <div class="p-4 text-center">
+                    <i class="fas fa-search mb-2 text-gray-500"></i>
+                    <p class="text-gray-400">Aucun résultat pour "${query}"</p>
+                </div>
+            `;
+            searchResults.style.display = 'block';
+            return;
+        }
+        
+        let html = '';
+        results.slice(0, 8).forEach(movie => {
+            const year = movie.release_date ? movie.release_date.substring(0, 4) : 'N/A';
+            const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
+            const poster = movie.poster_path ? 
+                'https://image.tmdb.org/t/p/w200' + movie.poster_path : 
+                'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=200&fit=crop';
+            
+            html += `
+                <div class="search-result-item" onclick="viewMovieDetails(${movie.id})">
+                    <img src="${poster}" alt="${movie.title}" loading="lazy">
+                    <div class="search-result-info">
+                        <h4>${movie.title}</h4>
+                        <p>${year} • ⭐ ${rating}/10</p>
+                    </div>
+                </div>
+            `;
+        });
+        
+        searchResults.innerHTML = html;
+        searchResults.style.display = 'block';
+    }
+    
+    // Fermer les résultats de recherche en cliquant ailleurs
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
         }
     });
-}
-</script>
+    
+    // Recherche soumise via formulaire
+    function performSearch() {
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `?search=${encodeURIComponent(query)}`;
+        }
+    }
+    
+    // Permettre la touche Entrée pour la recherche
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    // Fonctions existantes
+    function viewMovieDetails(movieId) {
+        window.location.href = 'movie-details.php?id=' + movieId;
+    }
+    
+    function addToWatchlist(movieId, movieTitle, moviePoster) {
+        fetch('../api/add-to-watchlist.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'movie_id=' + movieId + '&movie_title=' + encodeURIComponent(movieTitle) + '&movie_poster=' + encodeURIComponent(moviePoster)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Film ajouté à votre watchlist!', 'success');
+            } else {
+                showNotification('Erreur: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Erreur réseau', 'error');
+        });
+    }
+    
+    function showNotification(message, type) {
+        // Créer une notification
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg font-semibold shadow-lg ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Retirer la notification après 3 secondes
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    // Animation pour le scroll
+    document.addEventListener('DOMContentLoaded', function() {
+        const observerOptions = {
+            threshold: 0.1
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Observer les cartes de film
+        document.querySelectorAll('.movie-card').forEach(card => {
+            observer.observe(card);
+        });
+    });
+    </script>
 </body>
 </html>
