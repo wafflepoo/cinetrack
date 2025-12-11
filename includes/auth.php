@@ -3,27 +3,52 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in
+require_once __DIR__ . '/config.conf.php'; // ensure mysqli exists
+
+// ------------------------------
+// Check login
+// ------------------------------
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
-// Get current user data
+// ------------------------------
+// Load full user data from DB
+// ------------------------------
 function getCurrentUser() {
+    global $mysqli;
+
     if (!isLoggedIn()) {
         return null;
     }
-    return [
-        'id' => $_SESSION['user_id'],
-        'email' => $_SESSION['user_email'] ?? '',
-        'pseudo' => $_SESSION['user_pseudo'] ?? '',
-        'nom' => $_SESSION['user_nom'] ?? '',
-        'prenom' => $_SESSION['user_prenom'] ?? '',
-        'role' => $_SESSION['user_role'] ?? 'user'
-    ];
+
+    $id = $_SESSION['user_id'];
+
+    $stmt = $mysqli->prepare("
+        SELECT 
+            id_utilisateur AS id,
+            email,
+            pseudo,
+            nom,
+            prenom,
+            avatar
+        FROM UTILISATEUR
+        WHERE id_utilisateur = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+    $stmt->close();
+
+    return $user ?: null;
 }
 
-// Require login - redirect if not logged in
+// ------------------------------
+// Require login
+// ------------------------------
 function requireLogin() {
     if (!isLoggedIn()) {
         $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
@@ -32,7 +57,9 @@ function requireLogin() {
     }
 }
 
-// Logout user
+// ------------------------------
+// Logout
+// ------------------------------
 function logout() {
     session_unset();
     session_destroy();
@@ -40,7 +67,9 @@ function logout() {
     exit;
 }
 
-// Save or update film/series in database when user interacts with it
+// ------------------------------
+// Save films or series to DB
+// ------------------------------
 function saveMediaToDatabase($mysqli, $mediaData, $type = 'film') {
     try {
         if ($type === 'film') {
@@ -48,12 +77,12 @@ function saveMediaToDatabase($mysqli, $mediaData, $type = 'film') {
                 INSERT INTO FILM (id_film, titre, date_sortie, description, poster, id_api, realisateur)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
-                titre = VALUES(titre),
-                poster = VALUES(poster),
-                description = VALUES(description)
+                    titre = VALUES(titre),
+                    poster = VALUES(poster),
+                    description = VALUES(description)
             ");
             $stmt->bind_param(
-                "issssss", 
+                "issssss",
                 $mediaData['id'],
                 $mediaData['title'],
                 $mediaData['release_date'],
@@ -67,13 +96,13 @@ function saveMediaToDatabase($mysqli, $mediaData, $type = 'film') {
                 INSERT INTO SERIE (id_serie, titre, date_premiere, description, poster, id_api, nb_saisons)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
-                titre = VALUES(titre),
-                poster = VALUES(poster),
-                description = VALUES(description),
-                nb_saisons = VALUES(nb_saisons)
+                    titre = VALUES(titre),
+                    poster = VALUES(poster),
+                    description = VALUES(description),
+                    nb_saisons = VALUES(nb_saisons)
             ");
             $stmt->bind_param(
-                "isssssi", 
+                "isssssi",
                 $mediaData['id'],
                 $mediaData['name'],
                 $mediaData['first_air_date'],
@@ -83,9 +112,11 @@ function saveMediaToDatabase($mysqli, $mediaData, $type = 'film') {
                 $mediaData['number_of_seasons']
             );
         }
+
         $stmt->execute();
         $stmt->close();
         return true;
+
     } catch (Exception $e) {
         error_log("Error saving media: " . $e->getMessage());
         return false;
