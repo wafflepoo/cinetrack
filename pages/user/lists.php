@@ -151,15 +151,31 @@ $stmt->close();
         <button onclick="closeViewListModal()" class="absolute top-4 right-4 text-3xl text-gray-300">&times;</button>
 
         <h2 class="text-2xl font-bold mb-4">Contenu de la liste</h2>
+<div class="flex gap-4 mb-4">
+   
+ 
+</div>
 
         <div id="viewListContent" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             Chargement…
         </div>
 
-        <button id="openAddInsideView"
-            class="mt-6 px-6 py-3 bg-orange-600 hover:bg-orange-500 rounded-lg">
-            Ajouter des éléments
-        </button>
+       <div class="flex gap-4 mt-6">
+    
+    <!-- Ajouter -->
+    <button id="openAddInsideView"
+        class="px-6 py-3 bg-orange-600 hover:bg-orange-500 rounded-lg">
+        Ajouter des éléments
+    </button>
+
+    <!-- Supprimer la liste -->
+    <button onclick="deleteListDirect(currentListId)"
+        class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg">
+        Supprimer la liste
+    </button>
+
+</div>
+
     </div>
 </div>
 
@@ -245,6 +261,73 @@ document.getElementById("submitItems").addEventListener("click", () => {
             location.reload();
         });
 });
+
+/* REMOVE ITEM */
+function removeItem(selection_id, list_id) {
+    let data = new FormData();
+    data.append("selection_id", selection_id);
+    data.append("list_id", list_id);
+
+    fetch("remove-item.php", { method:"POST", body:data })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === "success") {
+                openViewListModal(list_id); // reload content
+            }
+        });
+}
+
+/* DELETE LIST */
+function deleteList(list_id) {
+    if (!confirm("Supprimer définitivement cette liste ?")) return;
+
+    let data = new FormData();
+    data.append("list_id", list_id);
+
+    fetch("delete-list.php", { method:"POST", body:data })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === "success") {
+                location.reload();
+            }
+        });
+}
+
+/* EDIT LIST */
+function editList(list_id) {
+    const newName = prompt("Nouveau nom de la liste :");
+    if (!newName) return;
+
+    let data = new FormData();
+    data.append("list_id", list_id);
+    data.append("list_name", newName);
+    data.append("list_type", "mixed"); // or keep existing
+
+    fetch("edit-list.php", { method:"POST", body:data })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === "success") {
+                location.reload();
+            }
+        });
+}
+function deleteListDirect(list_id) {
+    let data = new FormData();
+    data.append("list_id", list_id);
+
+    fetch("delete-list.php", {
+        method: "POST",
+        body: data
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.status === "success") {
+            closeViewListModal();
+            location.reload(); // refresh lists page
+        }
+    });
+}
+
 </script>
 
 </body>

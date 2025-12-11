@@ -7,9 +7,10 @@ requireLogin();
 $list_id = intval($_GET['id']);
 $user = getCurrentUser();
 
-// Load items
+// Load list items
 $stmt = $mysqli->prepare("
-    SELECT s.*, f.titre AS film_titre, f.poster AS film_poster,
+    SELECT s.id_selection, s.id_film, s.id_serie,
+           f.titre AS film_titre, f.poster AS film_poster,
            sr.titre AS serie_titre, sr.poster AS serie_poster
     FROM SELECTION_LISTE sl
     JOIN SELECTION s ON sl.id_selection = s.id_selection
@@ -21,6 +22,11 @@ $stmt->bind_param("i", $list_id);
 $stmt->execute();
 $data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+if (empty($data)) {
+    echo "<p class='text-gray-400'>Cette liste est vide.</p>";
+    exit;
+}
 
 foreach ($data as $item):
 
@@ -34,14 +40,17 @@ foreach ($data as $item):
         $type = "Série";
     }
 ?>
-<div class="bg-[#1b1f27] p-3 rounded-xl">
+<div class="relative group bg-[#1b1f27] p-3 rounded-xl">
+
+    <!-- DELETE BUTTON (top-right corner) -->
+    <button onclick="removeItem(<?= $item['id_selection'] ?>, <?= $list_id ?>)"
+            class="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 hidden group-hover:flex items-center justify-center">
+        ✕
+    </button>
+
     <img src="https://image.tmdb.org/t/p/w300<?= $poster ?>" class="rounded-xl mb-2">
-    <h3 class="font-semibold text-white text-sm"><?= htmlspecialchars($title) ?></h3>
+    <h3 class="font-semibold text-white text-sm truncate"><?= htmlspecialchars($title) ?></h3>
     <p class="text-gray-400 text-xs"><?= $type ?></p>
 </div>
 
 <?php endforeach; ?>
-
-<?php if (empty($data)): ?>
-<p class="text-gray-400">La liste est vide.</p>
-<?php endif; ?>
