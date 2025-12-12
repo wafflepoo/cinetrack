@@ -97,7 +97,3 @@ Projet réalisé dans un cadre académique.
 - TMDb API
 - OverPass
 
----
-
-## Architecture du projet
-
