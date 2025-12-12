@@ -1,7 +1,7 @@
 <?php
 // films.php - TMDb API Integration avec recherche AJAX
 include '../includes/config.conf.php';
-
+include '../includes/auth.php';
 // Get parameters for filtering
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $genre_filter = isset($_GET['genre']) ? $_GET['genre'] : '';
@@ -949,13 +949,30 @@ $current_year = date('Y');
                                              loading="lazy"
                                              onerror="this.src='https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=400&fit=crop'">
                                         <div class="movie-overlay">
-                                            <div class="movie-actions">
-                                                
-                                                <button class="action-btn play-btn" 
-                                                        onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)">
-                                                    <i class="fas fa-play"></i>
-                                                </button>
-                                            </div>
+                                           <div class="movie-actions">
+    <div class="flex gap-2">
+        <!-- Bouton Watchlist -->
+        <button class="action-btn watchlist-btn" 
+                onclick="event.stopPropagation(); addToWatchlist(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>', '<?php echo $film['date_sortie'] ?? ''; ?>')"
+                title="Ajouter à la watchlist">
+            <i class="fas fa-bookmark"></i>
+        </button>
+        
+        <!-- Bouton Ajouter à une liste -->
+        <button class="action-btn list-btn" 
+                onclick="event.stopPropagation(); addToList(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>', '<?php echo $film['date_sortie'] ?? ''; ?>')"
+                title="Ajouter à une liste">
+            <i class="fas fa-list"></i>
+        </button>
+        
+        <!-- Bouton Détails -->
+        <button class="action-btn play-btn" 
+                onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)"
+                title="Voir les détails">
+            <i class="fas fa-play"></i>
+        </button>
+    </div>
+</div>
                                             <div class="movie-rating">
                                                 <i class="fas fa-star"></i>
                                                 <span><?php echo number_format($film['note_moyenne'], 1); ?>/10</span>
@@ -1143,58 +1160,274 @@ $current_year = date('Y');
             performSearch();
         }
     });
+
+
+
+function viewMovieDetails(movieId) {
+    window.location.href = 'movie-details.php?id=' + movieId;
+}
+
+function addToWatchlist(movieId, movieTitle, moviePoster, releaseDate = '') {
+    const movieData = {
+        movie_id: movieId,
+        movie_title: movieTitle,
+        movie_poster: moviePoster,
+        release_date: releaseDate || null
+    };
     
-    // Fonctions existantes
-    function viewMovieDetails(movieId) {
-        window.location.href = 'movie-details.php?id=' + movieId;
+    fetch('../api/add-to-watchlist.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(movieData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(' Film ajouté à votre watchlist', 'success');
+        } else {
+            showToast(data.message, data.message === 'Déjà dans la watchlist' ? 'info' : 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Erreur réseau', 'error');
+    });
+}
+    
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+
+    const icon = {
+        success: 'fa-check-circle',
+        error: 'fa-xmark-circle',
+        info: 'fa-heart'
+    }[type];
+
+    toast.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'toast-out 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 2600);
+}
+
+
+    // Fonction pour ajouter à une liste
+function addToList(movieId, movieTitle, moviePoster, releaseDate = '') {
+    // Vérifier si l'utilisateur est connecté
+    <?php if (isLoggedIn()): ?>
+        // Utilisateur connecté - charger les listes
+        loadUserLists(movieId, movieTitle, moviePoster, releaseDate);
+    <?php else: ?>
+        // Non connecté - rediriger
+        showToast('Veuillez vous connecter pour ajouter à une liste', 'info');
+        setTimeout(() => {
+            window.location.href = 'connexion.php?redirect=' + encodeURIComponent(window.location.href);
+        }, 1500);
+    <?php endif; ?>
+}
+
+// Charger les listes de l'utilisateur
+function loadUserLists(movieId, movieTitle, moviePoster, releaseDate) {
+    fetch('../lists/get-user-lists.php')
+        .then(response => response.json())
+        .then(lists => {
+            showListSelectionModal(lists, movieId, movieTitle, moviePoster, releaseDate);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des listes', 'error');
+        });
+}
+
+// Afficher la modal de sélection de liste
+function showListSelectionModal(lists, movieId, movieTitle, moviePoster, releaseDate) {
+    const modalId = 'listModal-' + movieId;
+    
+    let modalHTML = `
+        <div id="${modalId}" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100]">
+            <div class="bg-gray-900 border border-orange-500/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Ajouter à une liste</h3>
+                    <button onclick="closeListModal('${modalId}')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                
+                <p class="text-gray-300 mb-6">
+                    Choisissez une liste pour "<strong class="text-orange-400">${movieTitle}</strong>"
+                </p>
+                
+                <div id="listsContainer-${movieId}" class="space-y-3 max-h-60 overflow-y-auto mb-6 pr-2">
+                    ${lists.length === 0 ? 
+                        '<div class="text-center py-4 text-gray-400">' +
+                            '<i class="fas fa-list mb-2 text-2xl"></i>' +
+                            '<p>Vous n\'avez aucune liste</p>' +
+                            '<a href="../lists/list.php" class="text-orange-500 hover:text-orange-400 mt-2 inline-block">Créer une liste</a>' +
+                        '</div>' 
+                        : ''}
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="createNewList(${movieId}, '${movieTitle.replace(/'/g, "\\'")}', '${moviePoster.replace(/'/g, "\\'")}', '${releaseDate.replace(/'/g, "\\'")}', '${modalId}')"
+                            class="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Nouvelle liste
+                    </button>
+                    <button onclick="closeListModal('${modalId}')"
+                            class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Afficher les listes si elles existent
+    if (lists.length > 0) {
+        const container = document.getElementById(`listsContainer-${movieId}`);
+        lists.forEach(list => {
+            const listItem = document.createElement('div');
+            listItem.className = 'p-4 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors border border-gray-700/50 hover:border-orange-500/30';
+            listItem.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-white">${list.nom_liste}</span>
+                    <span class="text-sm text-gray-400">${list.item_count || 0} élément(s)</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-400 capitalize">${list.type_liste || 'mixte'}</span>
+                    <button onclick="addToSpecificList(${list.id_liste}, ${movieId}, '${movieTitle.replace(/'/g, "\\'")}', '${moviePoster.replace(/'/g, "\\'")}', '${releaseDate.replace(/'/g, "\\'")}', '${modalId}')"
+                            class="px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm font-medium">
+                        Ajouter
+                    </button>
+                </div>
+            `;
+            container.appendChild(listItem);
+        });
     }
+}
+
+// Fermer la modal
+function closeListModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
+
+// Ajouter à une liste spécifique
+function addToSpecificList(listId, movieId, movieTitle, moviePoster, releaseDate, modalId) {
+    // D'abord ajouter le film à la base de données
+    const movieData = {
+        movie_id: movieId,
+        movie_title: movieTitle,
+        movie_poster: moviePoster,
+        release_date: releaseDate || null
+    };
     
-    function addToWatchlist(movieId, movieTitle, moviePoster) {
-        fetch('../api/add-to-watchlist.php', {
+    fetch('../api/add-to-watchlist.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movieData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success && data.message !== 'Déjà dans la watchlist') {
+            showToast('Erreur: ' + data.message, 'error');
+            return;
+        }
+        
+        // Puis ajouter à la liste
+        const formData = new FormData();
+        formData.append('list_id', listId);
+        formData.append('movie_id', movieId);
+        formData.append('movie_title', movieTitle);
+        formData.append('movie_poster', moviePoster);
+        
+        fetch('../lists/add-to-list.php', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'movie_id=' + movieId + '&movie_title=' + encodeURIComponent(movieTitle) + '&movie_poster=' + encodeURIComponent(moviePoster)
+            body: formData
         })
         .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(' Film ajouté à votre watchlist', 'success');
-
+        .then(result => {
+            closeListModal(modalId);
+            if (result.status === 'success') {
+                showToast(`Ajouté à "${result.list_name}"`, 'success');
+            } else if (result.status === 'exists') {
+                showToast('Déjà dans cette liste', 'info');
             } else {
-                showToast('Erreur: ' + data.message, 'error');
+                showToast('Erreur: ' + result.message, 'error');
             }
         })
         .catch(error => {
             showToast('Erreur réseau', 'error');
         });
-    }
+    })
+    .catch(error => {
+        showToast('Erreur d\'ajout', 'error');
+    });
+}
+
+// Créer une nouvelle liste
+function createNewList(movieId, movieTitle, moviePoster, releaseDate, modalId) {
+    const listName = prompt('Nom de la nouvelle liste :');
+    if (!listName || listName.trim() === '') return;
     
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toast-container');
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-
-        const icon = {
-            success: 'fa-check-circle',
-            error: 'fa-xmark-circle',
-            info: 'fa-heart'
-        }[type];
-
-        toast.innerHTML = `
-            <i class="fas ${icon}"></i>
-            <span>${message}</span>
-        `;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'toast-out 0.3s ease forwards';
-            setTimeout(() => toast.remove(), 300);
-        }, 2600);
-    }
+    // D'abord ajouter le film
+    const movieData = {
+        movie_id: movieId,
+        movie_title: movieTitle,
+        movie_poster: moviePoster,
+        release_date: releaseDate || null
+    };
+    
+    fetch('../api/add-to-watchlist.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movieData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success && data.message !== 'Déjà dans la watchlist') {
+            showToast('Erreur: ' + data.message, 'error');
+            return;
+        }
+        
+        // Créer la liste
+        const formData = new FormData();
+        formData.append('list_name', listName);
+        formData.append('list_type', 'films');
+        formData.append('movie_id', movieId);
+        formData.append('movie_title', movieTitle);
+        formData.append('movie_poster', moviePoster);
+        
+        fetch('../lists/create-list-with-item.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            closeListModal(modalId);
+            if (result.status === 'success') {
+                showToast(`Liste "${listName}" créée`, 'success');
+            } else {
+                showToast('Erreur: ' + result.message, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Erreur de création', 'error');
+        });
+    })
+    .catch(error => {
+        showToast('Erreur d\'ajout', 'error');
+    });
+}
 
     
     // Animation pour le scroll

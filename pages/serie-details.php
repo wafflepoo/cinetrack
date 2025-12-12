@@ -373,27 +373,33 @@ $status_fr = $status_translations[$status] ?? $status;
                         </div>
                         
                         <!-- Action Buttons -->
-                        <div class="flex flex-wrap gap-4 mb-6 justify-center lg:justify-start">
-                            <?php if ($in_watchlist): ?>
-                                <button class="btn-primary px-6 py-3 rounded-lg font-semibold opacity-70 cursor-not-allowed">
-                                    <i class="fas fa-check mr-2"></i>Dans votre watchlist
-                                </button>
-                            <?php else: ?>
-                                <button onclick="addToWatchlist()" class="btn-primary px-6 py-3 rounded-lg font-semibold">
-                                    <i class="fas fa-plus mr-2"></i>Ajouter à ma watchlist
-                                </button>
-                            <?php endif; ?>
-                            
-                            <?php if ($trailer_key): ?>
-                                <button onclick="openTrailerModal()" class="glass px-6 py-3 rounded-lg font-semibold border border-purple-500/50 hover:bg-purple-500/20 transition">
-                                    <i class="fas fa-play mr-2"></i>Voir la bande-annonce
-                                </button>
-                            <?php else: ?>
-                                <button class="glass px-6 py-3 rounded-lg font-semibold border border-gray-500/50 opacity-50 cursor-not-allowed">
-                                    <i class="fas fa-play mr-2"></i>Bande-annonce non disponible
-                                </button>
-                            <?php endif; ?>
-                        </div>
+                        <!-- Action Buttons -->
+<div class="flex flex-wrap gap-4 mb-6 justify-center lg:justify-start">
+    <?php if ($in_watchlist): ?>
+        <button class="btn-primary px-6 py-3 rounded-lg font-semibold opacity-70 cursor-not-allowed">
+            <i class="fas fa-check mr-2"></i>Dans votre watchlist
+        </button>
+    <?php else: ?>
+        <button onclick="addToWatchlist()" class="btn-primary px-6 py-3 rounded-lg font-semibold">
+            <i class="fas fa-plus mr-2"></i>Ajouter à ma watchlist
+        </button>
+    <?php endif; ?>
+    
+    <!-- NOUVEAU BOUTON: Ajouter à une liste -->
+    <button onclick="addToCustomList()" class="glass px-6 py-3 rounded-lg font-semibold border border-purple-500/50 hover:bg-purple-500/20 transition">
+        <i class="fas fa-list mr-2"></i>Ajouter à une liste
+    </button>
+    
+    <?php if ($trailer_key): ?>
+        <button onclick="openTrailerModal()" class="glass px-6 py-3 rounded-lg font-semibold border border-purple-500/50 hover:bg-purple-500/20 transition">
+            <i class="fas fa-play mr-2"></i>Voir la bande-annonce
+        </button>
+    <?php else: ?>
+        <button class="glass px-6 py-3 rounded-lg font-semibold border border-gray-500/50 opacity-50 cursor-not-allowed">
+            <i class="fas fa-play mr-2"></i>Bande-annonce non disponible
+        </button>
+    <?php endif; ?>
+</div>
                         
                         <!-- Synopsis -->
                         <div class="mb-6">
@@ -687,7 +693,222 @@ $status_fr = $status_translations[$status] ?? $status;
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
+// Fonction pour ajouter à une liste (séries)
+function addToCustomList() {
+    const serieData = {
+        serie_id: <?php echo $serie_id; ?>,
+        serie_title: '<?php echo addslashes($serie['name']); ?>',
+        serie_poster: '<?php echo $serie['poster_path']; ?>',
+        first_air_date: '<?php echo $serie['first_air_date']; ?>'
+    };
+    
+    // Vérifier si l'utilisateur est connecté
+    <?php if (isLoggedIn()): ?>
+        // Charger les listes de l'utilisateur
+        loadUserListsForSeries(serieData);
+    <?php else: ?>
+        // Non connecté - rediriger
+        showNotification('Veuillez vous connecter pour ajouter à une liste', 'error');
+        setTimeout(() => {
+            window.location.href = '../auth/login.php?redirect=' + encodeURIComponent(window.location.href);
+        }, 1500);
+    <?php endif; ?>
+}
 
+// Fonction pour charger les listes de l'utilisateur (séries)
+function loadUserListsForSeries(serieData) {
+    fetch('lists/get-user-lists.php') 
+        .then(response => response.json())
+        .then(lists => {
+            showListSelectionModalSeries(lists, serieData);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur lors du chargement des listes', 'error');
+        });
+}
+
+// Fonction pour afficher la modal de sélection de liste (adaptée pour séries)
+function showListSelectionModalSeries(lists, serieData) {
+    const modalId = 'listModal-series-' + serieData.serie_id;
+    
+    let modalHTML = `
+        <div id="${modalId}" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100]">
+            <div class="bg-gray-900 border border-purple-500/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Ajouter à une liste</h3>
+                    <button onclick="closeListModal('${modalId}')" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+                
+                <p class="text-gray-300 mb-6">
+                    Choisissez une liste pour "<strong class="text-purple-400">${serieData.serie_title}</strong>"
+                </p>
+                
+                <div id="listsContainer-series-${serieData.serie_id}" class="space-y-3 max-h-60 overflow-y-auto mb-6 pr-2">
+                    ${lists.length === 0 ? 
+                        '<div class="text-center py-4 text-gray-400">' +
+                            '<i class="fas fa-list mb-2 text-2xl"></i>' +
+                            '<p>Vous n\'avez aucune liste</p>' +
+                            '<a href="../lists/list.php" class="text-purple-500 hover:text-purple-400 mt-2 inline-block">Créer une liste</a>' +
+                        '</div>' 
+                        : ''}
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="createNewListForSeries(${serieData.serie_id}, '${serieData.serie_title.replace(/'/g, "\\'")}', '${serieData.serie_poster.replace(/'/g, "\\'")}', '${serieData.first_air_date.replace(/'/g, "\\'")}', '${modalId}')"
+                            class="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Nouvelle liste
+                    </button>
+                    <button onclick="closeListModal('${modalId}')"
+                            class="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors">
+                        Annuler
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Afficher les listes si elles existent
+    if (lists.length > 0) {
+        const container = document.getElementById(`listsContainer-series-${serieData.serie_id}`);
+        lists.forEach(list => {
+            const listItem = document.createElement('div');
+            listItem.className = 'p-4 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors border border-gray-700/50 hover:border-purple-500/30';
+            listItem.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-white">${list.nom_liste}</span>
+                    <span class="text-sm text-gray-400">${list.item_count || 0} élément(s)</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-400 capitalize">${list.type_liste || 'mixte'}</span>
+                    <button onclick="addToSpecificListForSeries(${list.id_liste}, ${serieData.serie_id}, '${serieData.serie_title.replace(/'/g, "\\'")}', '${serieData.serie_poster.replace(/'/g, "\\'")}', '${serieData.first_air_date.replace(/'/g, "\\'")}', '${modalId}')"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium">
+                        Ajouter
+                    </button>
+                </div>
+            `;
+            container.appendChild(listItem);
+        });
+    }
+}
+
+// Fonction pour ajouter une série à une liste spécifique
+function addToSpecificListForSeries(listId, serieId, serieTitle, seriePoster, firstAirDate, modalId) {
+    // D'abord ajouter la série à la base de données (si pas déjà)
+    const serieData = {
+        serie_id: serieId,
+        serie_title: serieTitle,
+        serie_poster: seriePoster,
+        first_air_date: firstAirDate || null
+    };
+    
+    fetch('add-to-watchlist.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serieData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success && data.message !== 'Déjà dans la watchlist') {
+            showNotification('Erreur: ' + data.message, 'error');
+            return;
+        }
+        
+        // Puis ajouter à la liste
+        const formData = new FormData();
+        formData.append('list_id', listId);
+        formData.append('serie_id', serieId);  // Note: serie_id au lieu de movie_id
+        formData.append('serie_title', serieTitle);  // serie_title au lieu de movie_title
+        formData.append('serie_poster', seriePoster);  // serie_poster au lieu de movie_poster
+        formData.append('content_type', 'series');  // Nouveau: indiquer que c'est une série
+        
+        fetch('lists/add-to-list.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            closeListModal(modalId);
+            if (result.status === 'success') {
+                showNotification(`Ajouté à "${result.list_name}"`, 'success');
+            } else if (result.status === 'exists') {
+                showNotification('Déjà dans cette liste', 'info');
+            } else {
+                showNotification('Erreur: ' + result.message, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Erreur réseau', 'error');
+        });
+    })
+    .catch(error => {
+        showNotification('Erreur d\'ajout', 'error');
+    });
+}
+
+// Fonction pour créer une nouvelle liste pour une série
+function createNewListForSeries(serieId, serieTitle, seriePoster, firstAirDate, modalId) {
+    const listName = prompt('Nom de la nouvelle liste :');
+    if (!listName || listName.trim() === '') return;
+    
+    // D'abord ajouter la série
+    const serieData = {
+        serie_id: serieId,
+        serie_title: serieTitle,
+        serie_poster: seriePoster,
+        first_air_date: firstAirDate || null
+    };
+    
+    fetch('add-to-watchlist.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serieData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success && data.message !== 'Déjà dans la watchlist') {
+            showNotification('Erreur: ' + data.message, 'error');
+            return;
+        }
+        
+        // Créer la liste
+        const formData = new FormData();
+        formData.append('list_name', listName);
+        formData.append('list_type', 'series');  // Type: series
+        formData.append('serie_id', serieId);  // serie_id au lieu de movie_id
+        formData.append('serie_title', serieTitle);  // serie_title au lieu de movie_title
+        formData.append('serie_poster', seriePoster);  // serie_poster au lieu de movie_poster
+        formData.append('content_type', 'series');  // Indiquer que c'est une série
+        
+        fetch('lists/create-list-with-item.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            closeListModal(modalId);
+            if (result.status === 'success') {
+                showNotification(`Liste "${listName}" créée`, 'success');
+            } else {
+                showNotification('Erreur: ' + result.message, 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Erreur de création', 'error');
+        });
+    })
+    .catch(error => {
+        showNotification('Erreur d\'ajout', 'error');
+    });
+}
+
+// Fonction pour fermer la modal
+function closeListModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.remove();
+}
     </script>
 </body>
 </html>
