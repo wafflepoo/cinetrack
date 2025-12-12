@@ -361,36 +361,46 @@ $genres = [
 
 $features = [
     [
-        'title' => 'Recommandations IA',
-        'description' => 'Notre IA analyse vos goûts et vous suggère des films et séries parfaitement adaptés à vos préférences.',
-        'icon' => 'fa-brain'
+        'title' => 'Découvrez les Tendances',
+        'description' => 'Explorez les films et séries les plus populaires du moment, mis à jour quotidiennement.',
+        'icon' => 'fa-fire'
+    ],
+    [
+        'title' => 'Réservation Cinéma',
+        'description' => 'Réservez vos places de cinéma directement depuis la plateforme avec tous les horaires disponibles.',
+        'icon' => 'fa-ticket'
     ],
     [
         'title' => 'Recherche Avancée',
-        'description' => 'Filtrez par genre, année, réalisateur, acteurs et plateforme de streaming pour trouver exactement ce que vous cherchez.',
+        'description' => 'Trouvez facilement vos films et séries préférés par genre, année ou réalisateur.',
         'icon' => 'fa-search'
     ],
     [
+        'title' => 'Quiz Cinéma',
+        'description' => 'Testez vos connaissances avec notre quiz quotidien sur les films et les acteurs.',
+        'icon' => 'fa-gamepad'
+    ],
+    [
         'title' => 'Communauté Active',
-        'description' => 'Rejoignez une communauté de passionnés, partagez vos critiques et découvrez de nouveaux amis cinéphiles.',
+        'description' => 'Échangez avec d\'autres passionnés, partagez vos coups de cœur et vos critiques.',
         'icon' => 'fa-users'
     ],
     [
         'title' => 'Listes Personnalisées',
-        'description' => 'Créez et organisez vos propres listes de films à regarder, favoris et collections thématiques.',
-        'icon' => 'fa-list'
-    ],
-    [
-        'title' => 'Statistiques Détaillées',
-        'description' => 'Suivez votre progression, découvrez vos tendances de visionnage et partagez vos statistiques.',
-        'icon' => 'fa-chart-bar'
-    ],
-    [
-        'title' => 'Critiques & Notes',
-        'description' => 'Lisez et écrivez des critiques détaillées, notez vos films et partagez votre opinion avec la communauté.',
-        'icon' => 'fa-comments'
+        'description' => 'Créez et gérez vos listes de films à regarder et vos favoris.',
+        'icon' => 'fa-bookmark'
     ]
 ];
+// Fonction pour générer des images de films/séries aléatoires pour les features
+function getRandomMovieImage() {
+    $images = [
+        'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1489599809516-9827b6d1cf13?w=500&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1512070679279-8988d32161be?w=500&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1518568814500-bf0f8d125f46?w=500&auto=format&fit=crop',
+    ];
+    return $images[array_rand($images)];
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
