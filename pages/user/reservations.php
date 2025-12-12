@@ -38,26 +38,7 @@ foreach ($reservations as $reservation) {
     $total_spent += $reservation['total_price'];
 }
 
-// Gestion de l'annulation
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])) {
-    $reservation_id = intval($_POST['reservation_id']);
-    
-    // Vérifier que la réservation appartient bien à l'utilisateur
-    $delete_query = "DELETE FROM cinema_reservations 
-                     WHERE id = ? AND user_id = ? AND reservation_date >= ?";
-    $delete_stmt = $mysqli->prepare($delete_query);
-    $delete_stmt->bind_param("iis", $reservation_id, $user['id'], $today);
-    
-    if ($delete_stmt->execute()) {
-        $_SESSION['success_message'] = "Réservation annulée avec succès!";
-    } else {
-        $_SESSION['error_message'] = "Erreur lors de l'annulation.";
-    }
-    $delete_stmt->close();
-    
-    header("Location: reservations.php");
-    exit;
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -343,11 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])
                             QR Code
                         </button>
                         
-                        <button onclick="confirmCancel(<?php echo $reservation['reservation_id']; ?>, '<?php echo addslashes($reservation['film_title']); ?>')" 
-                                class="cancel-btn px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
-                            <i class="fas fa-times-circle"></i>
-                            Annuler
-                        </button>
+                    
                     </div>
                 <?php else: ?>
                     <div class="bg-gray-800/30 rounded-lg p-3 text-center text-gray-500">
@@ -381,28 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])
         </div>
     </div>
     
-    <!-- Modal Confirmation Annulation -->
-    <div id="cancelModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden z-50 flex items-center justify-center">
-        <div class="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 border border-red-500/30">
-            <div class="text-center">
-                <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
-                <h3 class="text-2xl font-bold mb-4">Annuler la réservation ?</h3>
-                <p class="text-gray-400 mb-6">
-                    Êtes-vous sûr de vouloir annuler votre réservation pour<br>
-                    <span id="cancelFilmTitle" class="font-bold text-orange-500"></span> ?
-                </p>
-                <form method="POST" class="flex gap-3">
-                    <input type="hidden" name="reservation_id" id="cancelReservationId">
-                    <button type="button" onclick="closeCancelModal()" class="flex-1 px-6 py-3 rounded-xl font-bold bg-gray-800 hover:bg-gray-700 transition">
-                        Non, garder
-                    </button>
-                    <button type="submit" name="cancel_reservation" class="cancel-btn flex-1 px-6 py-3 rounded-xl font-bold">
-                        Oui, annuler
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
+    
     
     <?php include '../../includes/footer.php'; ?>
     
@@ -446,12 +402,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])
             document.getElementById('qrModal').classList.add('hidden');
         }
         
-        // Annulation
-        function confirmCancel(id, title) {
-            document.getElementById('cancelReservationId').value = id;
-            document.getElementById('cancelFilmTitle').textContent = title;
-            document.getElementById('cancelModal').classList.remove('hidden');
-        }
+      
         
         function closeCancelModal() {
             document.getElementById('cancelModal').classList.add('hidden');
