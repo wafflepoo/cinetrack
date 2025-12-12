@@ -6,6 +6,21 @@ require_once '../../includes/auth.php';
 requireLogin();
 $user = getCurrentUser();
 ?>
+
+
+<?php if (!empty($errors)): ?>
+<div class="bg-red-600/20 text-red-400 p-4 rounded-xl mb-4">
+    <?php foreach ($errors as $err) echo "<p>$err</p>"; ?>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($success)): ?>
+<div class="bg-green-600/20 text-green-400 p-4 rounded-xl mb-4">
+    <p><?= $success ?></p>
+</div>
+<?php endif; ?>
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
