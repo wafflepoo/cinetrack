@@ -23,6 +23,8 @@ if (!$list) {
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($list["nom_liste"]) ?></title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>

@@ -12,8 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = "Veuillez remplir tous les champs";
     } else {
-        // Use MySQLi instead of PDO
-        $stmt = $mysqli->prepare("SELECT * FROM UTILISATEUR WHERE email = ? AND est_verifie = 1");
+        $stmt = $mysqli->prepare("
+                SELECT id_utilisateur, email, pseudo, nom, prenom, role, avatar, mot_de_passe
+                FROM UTILISATEUR
+                WHERE email = ? AND est_verifie = 1
+            ");
+
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -27,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_nom'] = $user['nom'];
             $_SESSION['user_prenom'] = $user['prenom'];
             $_SESSION['user_role'] = $user['role'];
+            $_SESSION['user_avatar'] = $user['avatar'];
             
             // Redirect to intended page or dashboard
             $redirect = $_SESSION['redirect_after_login'] ?? '/pages/user/dashboard.php';
@@ -49,6 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body class="gradient-bg text-white min-h-screen flex flex-col">
     <?php include '../includes/header.php'; ?>
