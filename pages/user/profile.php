@@ -111,19 +111,19 @@ unset($_SESSION['error_profile'], $_SESSION['success_profile'], $_SESSION['error
     </aside>
 
     <!-- CONTENT -->
-    <section class="lg:col-span-2 space-y-10">
+        <section class="lg:col-span-2 space-y-10">
 
         <!-- PROFILE TAB -->
         <div id="profile" class="glass p-6 rounded-2xl">
             <h2 class="text-2xl font-bold mb-6">Informations du profil</h2>
 
             <form action="update-profile.php" method="POST" enctype="multipart/form-data" class="space-y-6">
-                <div class="flex items-center gap-6">
+                <div class="flex flex-col sm:flex-row items-center gap-6">
                     <img src="<?= $user['avatar'] ? '/' . $user['avatar'] : 'https://cdn-icons-png.flaticon.com/512/149/149071.png' ?>"
                          class="w-24 h-24 rounded-full object-cover border border-gray-600 shadow-lg">
-                    <div>
+                    <div class="w-full sm:w-auto">
                         <label class="block text-sm text-gray-300 mb-1">Changer la photo</label>
-                        <input type="file" name="avatar" accept="image/*" class="text-gray-300">
+                        <input type="file" name="avatar" accept="image/*" class="text-gray-300 w-full sm:w-auto">
                     </div>
                 </div>
 
@@ -158,7 +158,6 @@ unset($_SESSION['error_profile'], $_SESSION['success_profile'], $_SESSION['error
                 </button>
             </form>
         </div>
-
         <!-- SECURITY TAB -->
         <div id="security" class="glass p-6 rounded-2xl hidden">
             <h2 class="text-2xl font-bold mb-6">Sécurité du compte</h2>
