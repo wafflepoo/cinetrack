@@ -151,6 +151,8 @@ $current_year = date('Y');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/animations.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
         
@@ -167,7 +169,55 @@ $current_year = date('Y');
             position: relative;
             overflow: hidden;
         }
-        
+        .toast {
+            min-width: 280px;
+            max-width: 360px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.45);
+            backdrop-filter: blur(12px);
+            animation: toast-in 0.35s ease forwards;
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+        }
+
+        .toast i {
+            font-size: 1.3rem;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(40px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes toast-out {
+            to {
+                opacity: 0;
+                transform: translateX(40px) scale(0.9);
+            }
+        }
+
         .films-hero::before {
             content: '';
             position: absolute;
@@ -900,10 +950,7 @@ $current_year = date('Y');
                                              onerror="this.src='https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=400&fit=crop'">
                                         <div class="movie-overlay">
                                             <div class="movie-actions">
-                                                <button class="action-btn favorite-btn" 
-                                                        onclick="event.stopPropagation(); addToWatchlist(<?php echo $film['id_film']; ?>, '<?php echo addslashes($film['titre']); ?>', '<?php echo $film['poster']; ?>')">
-                                                    <i class="far fa-heart"></i>
-                                                </button>
+                                                
                                                 <button class="action-btn play-btn" 
                                                         onclick="event.stopPropagation(); viewMovieDetails(<?php echo $film['id_film']; ?>)">
                                                     <i class="fas fa-play"></i>
@@ -1113,30 +1160,42 @@ $current_year = date('Y');
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification('Film ajouté à votre watchlist!', 'success');
+                showToast(' Film ajouté à votre watchlist', 'success');
+
             } else {
-                showNotification('Erreur: ' + data.message, 'error');
+                showToast('Erreur: ' + data.message, 'error');
             }
         })
         .catch(error => {
-            showNotification('Erreur réseau', 'error');
+            showToast('Erreur réseau', 'error');
         });
     }
     
-    function showNotification(message, type) {
-        // Créer une notification
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg font-semibold shadow-lg ${
-            type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        }`;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        // Retirer la notification après 3 secondes
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        const icon = {
+            success: 'fa-check-circle',
+            error: 'fa-xmark-circle',
+            info: 'fa-heart'
+        }[type];
+
+        toast.innerHTML = `
+            <i class="fas ${icon}"></i>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
         setTimeout(() => {
-            notification.remove();
-        }, 3000);
+            toast.style.animation = 'toast-out 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 2600);
     }
+
     
     // Animation pour le scroll
     document.addEventListener('DOMContentLoaded', function() {

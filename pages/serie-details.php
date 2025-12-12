@@ -194,6 +194,8 @@ $status_fr = $status_translations[$status] ?? $status;
     <title><?php echo htmlspecialchars($serie['name']); ?> - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
     <style>
         .serie-hero {
             <?php if ($backdrop_url !== 'none'): ?>
@@ -650,45 +652,42 @@ $status_fr = $status_translations[$status] ?? $status;
             });
         })
         .then(data => {
-            console.log('Parsed response data:', data);
             if (data.success) {
-                alert('SUCCÈS: ' + data.message);
-                location.reload();
+                showNotification(' Série ajoutée à votre watchlist', 'success');
+
+                // reload AFTER animation
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+
             } else {
-                alert('ERREUR: ' + data.message);
+                showNotification('❌ ' + data.message, 'error');
             }
         })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            alert('ERREUR FETCH: ' + error.message);
-        });
     }
 
     // Notification function
-    function showNotification(message, type) {
-        const existingNotifications = document.querySelectorAll('.custom-notification');
-        existingNotifications.forEach(notif => notif.remove());
-        
+    function showNotification(message, type = 'success') {
         const notification = document.createElement('div');
-        notification.className = `custom-notification fixed top-20 right-4 px-6 py-3 rounded-lg text-white font-semibold z-50 transform transition-transform duration-300 ${
-            type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        }`;
-        notification.textContent = message;
-        notification.style.transform = 'translateX(400px)';
-        
+
+        notification.className = `
+            notification ${type}
+            show
+        `;
+
+        notification.innerHTML = `
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-xmark-circle'} mr-2"></i>
+            ${message}
+        `;
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-        
-        setTimeout(() => {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
+
     </script>
 </body>
 </html>

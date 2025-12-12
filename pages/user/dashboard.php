@@ -247,6 +247,8 @@ $stmt->close();
     <title>Dashboard - CineTrack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico">
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #0a0e14 0%, #05080d 100%);

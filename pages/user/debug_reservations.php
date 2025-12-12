@@ -20,7 +20,7 @@ $stmt->close();
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>🔍 Debug Réservations</title>
+    <title> Debug Réservations</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
